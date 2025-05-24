@@ -9,5 +9,4 @@ public class ZhuzhuChargingStationBackendApplication {
     public static void main(String[] args) {
         SpringApplication.run(ZhuzhuChargingStationBackendApplication.class, args);
     }
-
 }
