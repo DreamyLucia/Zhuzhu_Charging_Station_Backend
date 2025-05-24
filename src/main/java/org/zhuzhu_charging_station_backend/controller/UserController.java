@@ -1,9 +1,9 @@
 package org.zhuzhu_charging_station_backend.controller;
 
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import org.zhuzhu_charging_station_backend.dto.RegisterRequest;
-import org.zhuzhu_charging_station_backend.dto.StandardResponse;
-import org.zhuzhu_charging_station_backend.dto.UserIdResponse;
+import org.zhuzhu_charging_station_backend.dto.*;
+import org.zhuzhu_charging_station_backend.entity.User;
+import org.zhuzhu_charging_station_backend.repository.UserRepository;
 import org.zhuzhu_charging_station_backend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,9 +20,11 @@ import javax.validation.Valid;
 @Tag(name = "用户管理")
 public class UserController {
     private final UserService userService;
+    private final UserRepository userRepository;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, UserRepository userRepository) {
         this.userService = userService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/register")
@@ -36,14 +38,16 @@ public class UserController {
                             schema = @Schema(implementation = StandardResponse.class),
                             examples = @ExampleObject(
                                     value = """
-                    {
-                      "code": 200,
-                      "msg": "Success",
-                      "data": {
-                        "userId": 1,
-                        "username": "testuser"
-                      }
-                    }"""
+                {
+                  "code": 200,
+                  "msg": "Success",
+                  "data": {
+                    "userId": 1,
+                    "username": "testuser",
+                    "createdAt": "2023-01-01T00:00:00",
+                    "updatedAt": "2023-01-01T00:00:00"
+                  }
+                }"""
                             )
                     )
             ),
@@ -55,17 +59,70 @@ public class UserController {
                             schema = @Schema(implementation = StandardResponse.class),
                             examples = @ExampleObject(
                                     value = """
-                    {
-                      "code": 400,
-                      "msg": "用户名已存在",
-                      "data": null
-                    }"""
+                {
+                  "code": 400,
+                  "msg": "用户名已存在",
+                  "data": null
+                }"""
                             )
                     )
             )
     })
-    public StandardResponse<UserIdResponse> register(
+    public StandardResponse<UserResponse> register(
             @Valid @RequestBody RegisterRequest request) {
         return userService.register(request.getUsername(), request.getPassword());
+    }
+
+    @PostMapping("/login")
+    @Operation(summary = "用户登录")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "登录成功",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(
+                                    value = """
+                {
+                  "code": 200,
+                  "msg": "Success",
+                  "data": {
+                    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "user": {
+                      "userId": 1,
+                      "username": "testuser",
+                      "createdAt": "2023-01-01T00:00:00",
+                      "updatedAt": "2023-01-01T00:00:00"
+                    }
+                  }
+                }"""
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "用户名或密码错误",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = StandardResponse.class),
+                            examples = @ExampleObject(
+                                    value = """
+                {
+                  "code": 401,
+                  "msg": "用户名或密码错误",
+                  "data": null
+                }"""
+                            )
+                    )
+            )
+    })
+    public StandardResponse<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request) {
+        String token = userService.login(request.getUsername(), request.getPassword());
+        User user = userRepository.findByUsername(request.getUsername()).orElseThrow();
+        return StandardResponse.success(
+                new LoginResponse(token, new UserResponse(user))
+        );
     }
 }
