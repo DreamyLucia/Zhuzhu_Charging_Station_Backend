@@ -12,6 +12,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
 
 import javax.validation.Valid;
 
@@ -21,10 +24,12 @@ import javax.validation.Valid;
 public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
+    private final JwtTokenUtil jwtTokenUtil;
 
-    public UserController(UserService userService, UserRepository userRepository) {
+    public UserController(UserService userService, UserRepository userRepository, JwtTokenUtil jwtTokenUtil) {
         this.userService = userService;
         this.userRepository = userRepository;
+        this.jwtTokenUtil = jwtTokenUtil;
     }
 
     @PostMapping("/register")
@@ -124,5 +129,38 @@ public class UserController {
         return StandardResponse.success(
                 new LoginResponse(token, new UserResponse(user))
         );
+    }
+
+    @GetMapping("/info")
+    @Operation(summary = "获取当前用户信息")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "成功返回用户信息",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    value = """
+                    {
+                      "code": 200,
+                      "msg": "Success",
+                      "data": {
+                        "userId": 1,
+                        "username": "testuser",
+                        "roles": ["ROLE_USER"],
+                        "createdAt": "2023-01-01T00:00:00",
+                        "updatedAt": "2023-01-01T00:00:00"
+                      }
+                    }"""
+                            )
+                    )
+            )
+    })
+    public StandardResponse<UserResponse> getInfo() {
+        // 直接取 userId
+        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+        return StandardResponse.success(new UserResponse(user));
     }
 }
