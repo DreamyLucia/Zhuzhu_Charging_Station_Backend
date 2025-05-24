@@ -8,8 +8,10 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -33,6 +35,9 @@ public class User implements UserDetails {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;  // 自动记录更新时间
+
+    @Column(nullable = false)
+    private String roles;
 
     // 构造方法
     public User() {}
@@ -76,6 +81,14 @@ public class User implements UserDetails {
         return updatedAt;
     }
 
+    public void setRoles(String roles) {
+        this.roles = roles;
+    }
+
+    public String getRoles() {
+        return roles;
+    }
+
     // 确保保存时触发时间更新
     @PrePersist
     protected void onCreate() {
@@ -91,7 +104,9 @@ public class User implements UserDetails {
     // --- 实现 UserDetails 接口的方法 ---
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // 如果没有权限管理，返回空列表
+        return Arrays.stream(roles.split(","))
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
     }
 
     @Override

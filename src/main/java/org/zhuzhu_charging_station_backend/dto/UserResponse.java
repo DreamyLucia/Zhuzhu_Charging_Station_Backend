@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import org.zhuzhu_charging_station_backend.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Arrays;
 
 public class UserResponse {
     @Schema(description = "用户ID", example = "1")
@@ -11,6 +13,9 @@ public class UserResponse {
 
     @Schema(description = "用户名", example = "testuser")
     private String username;
+
+    @Schema(description = "角色列表", example = "[\"ROLE_USER\"]")
+    private List<String> roles;
 
     @Schema(description = "创建时间", example = "2023-01-01T00:00:00")
     private LocalDateTime createdAt;
@@ -21,6 +26,7 @@ public class UserResponse {
     public UserResponse(User user) {
         this.userId = user.getUserId();
         this.username = user.getUsername();
+        this.roles = Arrays.asList(user.getRoles().split(",")); // 将逗号分隔的字符串转为List
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
     }
@@ -32,6 +38,10 @@ public class UserResponse {
 
     public String getUsername() {
         return username;
+    }
+
+    public List<String> getRoles() {
+        return roles;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -48,6 +48,7 @@ public class UserService {
             User user = new User();
             user.setUserId(userId);
             user.setUsername(username);
+            user.setRoles("ROLE_USER"); // 默认角色
             user.setPassword(PasswordUtil.encode(password));
 
             // 保存用户并刷新会话
