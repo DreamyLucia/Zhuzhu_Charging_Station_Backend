@@ -2,6 +2,7 @@ package org.zhuzhu_charging_station_backend.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,11 +16,15 @@ import org.zhuzhu_charging_station_backend.util.PasswordUtil;
 import org.zhuzhu_charging_station_backend.dto.StandardResponse;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.EntityManager;
+
 @Service
 public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private final UserRepository userRepository;
     private final JwtTokenUtil jwtTokenUtil;
+    @Autowired
+    private EntityManager entityManager;
 
     public UserService(UserRepository userRepository, JwtTokenUtil jwtTokenUtil) {
         this.userRepository = userRepository;
@@ -45,8 +50,11 @@ public class UserService {
             user.setUsername(username);
             user.setPassword(PasswordUtil.encode(password));
 
-            // 保存用户并获取完整的实体对象
+            // 保存用户并刷新会话
             user = userRepository.saveAndFlush(user);
+
+            // 强制从数据库中重新加载实体对象
+            entityManager.refresh(user);
 
             // 4. 返回UserResponse
             logger.info("用户注册成功，ID: {}, Created At: {}, Updated At: {}", userId, user.getCreatedAt(), user.getUpdatedAt());
