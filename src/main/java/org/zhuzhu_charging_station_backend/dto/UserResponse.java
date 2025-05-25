@@ -1,12 +1,14 @@
 package org.zhuzhu_charging_station_backend.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.Data;
 import org.zhuzhu_charging_station_backend.entity.User;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Arrays;
 
+@Data
 public class UserResponse {
     @Schema(description = "用户ID", example = "1")
     private Long userId;
@@ -29,26 +31,5 @@ public class UserResponse {
         this.roles = Arrays.asList(user.getRoles().split(",")); // 将逗号分隔的字符串转为List
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
-    }
-
-    // Getters
-    public Long getUserId() {
-        return userId;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public List<String> getRoles() {
-        return roles;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public LocalDateTime getUpdatedAt() {
-        return updatedAt;
     }
 }
