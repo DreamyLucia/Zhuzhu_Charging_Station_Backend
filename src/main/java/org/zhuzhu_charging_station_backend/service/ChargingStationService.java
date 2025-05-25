@@ -13,6 +13,8 @@ import org.zhuzhu_charging_station_backend.repository.ChargingStationRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,6 +52,7 @@ public class ChargingStationService {
 
             // 初始化报表对象ReportInfo
             ReportInfo report = new ReportInfo();
+            report.setUpdatedAt(LocalDateTime.now().withNano(0));
             report.setTotalChargeCount(0);
             report.setTotalChargeTime(0L);
             report.setTotalChargeAmount(0D);
@@ -72,7 +75,11 @@ public class ChargingStationService {
             slot.setQueue(new ArrayList<>());
             slotRedisTemplate.opsForValue().set(slotKey(id), slot);
 
+            // 本次查询时间
+            LocalDateTime now = LocalDateTime.now().withNano(0);
+
             return new ChargingStationResponse(
+                    now,
                     saved.getId(),
                     saved.getName(),
                     saved.getMode(),
@@ -124,7 +131,11 @@ public class ChargingStationService {
             slot.setStatus(status);
             slotRedisTemplate.opsForValue().set(slotKey(id), slot);
 
+            // 本次查询时间
+            LocalDateTime now = LocalDateTime.now().withNano(0);
+
             return new ChargingStationResponse(
+                    now,
                     saved.getId(),
                     saved.getName(),
                     saved.getMode(),
@@ -180,7 +191,12 @@ public class ChargingStationService {
         ChargingStation station = chargingStationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("充电桩不存在"));
         ChargingStationSlot slot = slotRedisTemplate.opsForValue().get(slotKey(id));
+
+        // 本次查询时间
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+
         return new ChargingStationResponse(
+                now,
                 station.getId(),
                 station.getName(),
                 station.getMode(),
@@ -199,7 +215,10 @@ public class ChargingStationService {
         return stations.stream()
                 .map(station -> {
                     ChargingStationSlot slot = slotRedisTemplate.opsForValue().get(slotKey(station.getId()));
+
+                    LocalDateTime now = LocalDateTime.now().withNano(0); // 本次查询时间
                     return new ChargingStationResponse(
+                            now,
                             station.getId(),
                             station.getName(),
                             station.getMode(),

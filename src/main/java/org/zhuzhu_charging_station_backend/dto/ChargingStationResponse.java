@@ -4,10 +4,12 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import org.zhuzhu_charging_station_backend.entity.ChargingStationSlot;
 import org.zhuzhu_charging_station_backend.entity.ReportInfo;
+import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
 public class ChargingStationResponse {
+    private LocalDateTime queriedAt;  // 本次响应的查询时间
     private Long id;
     private String name;
     private Integer mode;
