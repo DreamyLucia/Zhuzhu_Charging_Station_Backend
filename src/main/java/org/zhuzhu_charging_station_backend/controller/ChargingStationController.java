@@ -46,9 +46,9 @@ public class ChargingStationController {
     }
 
     @PutMapping("/{id}/repair")
-    @Operation(summary = "维修充电桩")
-    public StandardResponse<Void> repair(@PathVariable Long id) {
-        chargingStationService.repairChargingStation(id);
-        return StandardResponse.success();
+    @Operation(summary = "维修充电桩，并返回实时信息）")
+    public StandardResponse<ChargingStationResponse> repair(@PathVariable Long id) {
+        ChargingStationResponse response = chargingStationService.repairChargingStation(id);
+        return StandardResponse.success(response);
     }
 }

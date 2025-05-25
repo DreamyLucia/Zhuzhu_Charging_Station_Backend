@@ -162,11 +162,13 @@ public class ChargingStationService {
     /**
      * 将充电桩状态切为“空闲”，用于维修/复位场景
      * @param id 充电桩ID
+     * @return 充电桩完整信息（含基础属性、slot、报表信息）
      */
-    public void repairChargingStation(Long id) {
-        if (!chargingStationRepository.existsById(id)) {
-            throw new NotFoundException("充电桩不存在，无法维修");
-        }
+    public ChargingStationResponse repairChargingStation(Long id) {
+        ChargingStation station = chargingStationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("充电桩不存在，无法维修"));
+
+        // 获取或初始化slot
         ChargingStationSlot slot = slotRedisTemplate.opsForValue().get(slotKey(id));
         if (slot == null) {
             slot = new ChargingStationSlot();
@@ -180,6 +182,19 @@ public class ChargingStationService {
         status.setStatus(0); // 0=空闲
         slot.setStatus(status);
         slotRedisTemplate.opsForValue().set(slotKey(id), slot);
+
+        // 查询时间
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+
+        return new ChargingStationResponse(
+                now,
+                station.getId(),
+                station.getName(),
+                station.getMode(),
+                station.getPower(),
+                slot,
+                station.getReport()
+        );
     }
 
     /**
