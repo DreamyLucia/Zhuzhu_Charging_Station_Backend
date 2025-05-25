@@ -4,6 +4,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.zhuzhu_charging_station_backend.dto.StandardResponse;
 
 /**
@@ -13,12 +15,30 @@ import org.zhuzhu_charging_station_backend.dto.StandardResponse;
 public class GlobalExceptionHandler {
 
     /**
+     * 认证失败（如登录用户名/密码错误），返回401
+     */
+    @ExceptionHandler({UsernameNotFoundException.class, BadCredentialsException.class})
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public StandardResponse<?> handleAuthException(RuntimeException e) {
+        return StandardResponse.error(401, e.getMessage());
+    }
+
+    /**
      * 捕获查无/删无等资源不存在异常，返回404
      */
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public StandardResponse<?> handleNotFoundException(NotFoundException e) {
         return StandardResponse.error(404, e.getMessage());
+    }
+
+    /**
+     * 资源已存在异常，新增/保存唯一约束冲突时抛出，返回409
+     */
+    @ExceptionHandler(AlreadyExistsException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public StandardResponse<?> handleAlreadyExistsException(AlreadyExistsException e) {
+        return StandardResponse.error(409, e.getMessage());
     }
 
     /**

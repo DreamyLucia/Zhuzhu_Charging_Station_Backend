@@ -8,6 +8,7 @@ import org.zhuzhu_charging_station_backend.entity.ChargingStation;
 import org.zhuzhu_charging_station_backend.entity.ChargingStationSlot;
 import org.zhuzhu_charging_station_backend.entity.ChargingStationStatus;
 import org.zhuzhu_charging_station_backend.entity.ReportInfo;
+import org.zhuzhu_charging_station_backend.exception.AlreadyExistsException;
 import org.zhuzhu_charging_station_backend.repository.ChargingStationRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -35,6 +36,10 @@ public class ChargingStationService {
         Long id;
 
         if (isCreate) {
+            if (chargingStationRepository.existsByName(request.getName())) {
+                throw new AlreadyExistsException("充电桩名称已存在，请更换");
+            }
+
             // 创建流程
             id = IdGenerator.generateUniqueStationId(chargingStationRepository, 10);
             station = new ChargingStation();

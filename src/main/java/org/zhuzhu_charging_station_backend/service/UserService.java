@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
 import org.zhuzhu_charging_station_backend.dto.UserResponse;
 import org.zhuzhu_charging_station_backend.entity.User;
+import org.zhuzhu_charging_station_backend.exception.AlreadyExistsException;
 import org.zhuzhu_charging_station_backend.repository.UserRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
@@ -37,7 +38,7 @@ public class UserService {
             // 1. 检查用户名唯一性
             if (userRepository.existsByUsername(username)) {
                 logger.warn("用户名已存在: {}", username);
-                return StandardResponse.error(400, "用户名已存在");
+                throw new AlreadyExistsException("用户名已存在");
             }
 
             // 2. 生成唯一ID
@@ -63,10 +64,10 @@ public class UserService {
 
         } catch (DataIntegrityViolationException e) {
             logger.error("数据冲突: {}", e.getMessage());
-            return StandardResponse.error(500, "系统繁忙，请重试");
+            throw new AlreadyExistsException("用户名已存在");
         } catch (IllegalStateException e) {
             logger.error("ID生成失败: {}", e.getMessage());
-            return StandardResponse.error(500, "系统资源不足");
+            throw new RuntimeException("系统资源不足");
         }
     }
 
