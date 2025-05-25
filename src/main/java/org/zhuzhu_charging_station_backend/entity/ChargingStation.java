@@ -1,7 +1,10 @@
 package org.zhuzhu_charging_station_backend.entity;
 
+import lombok.Data;
+
 import javax.persistence.*;
 
+@Data
 @Entity
 public class ChargingStation {
 
@@ -17,96 +20,11 @@ public class ChargingStation {
     @Column(nullable = false)
     private Double power; // 功率
 
-    // 当前状态信息
-    @Column(nullable = false)
-    private Integer status; // 0 正常，1 关闭，2 故障
-
-    @Column(nullable = false)
-    private Integer currentChargeCount; // 系统启动后的累计充电次数
-
-    @Column(nullable = false)
-    private Long currentChargeTime; // 系统启动后的累计充电总时长
-
-    @Column(nullable = false)
-    private Double currentChargeAmount; // 系统启动后的累计充电总电量
+    // 充电桩实时状态信息（从 Redis 查询）
+    @Transient
+    private ChargingStationStatus statusInfo;
 
     // 报表信息
     @Embedded
     private ReportInfo report;
-
-    public ChargingStation() {}
-
-    // Getters and Setters
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public Integer getMode() {
-        return mode;
-    }
-
-    public void setMode(Integer mode) {
-        this.mode = mode;
-    }
-
-    public Double getPower() {
-        return power;
-    }
-
-    public void setPower(Double power) {
-        this.power = power;
-    }
-
-    public Integer getStatus() {
-        return status;
-    }
-
-    public void setStatus(Integer status) {
-        this.status = status;
-    }
-
-    public Integer getCurrentChargeCount() {
-        return currentChargeCount;
-    }
-
-    public void setCurrentChargeCount(Integer currentChargeCount) {
-        this.currentChargeCount = currentChargeCount;
-    }
-
-    public Long getCurrentChargeTime() {
-        return currentChargeTime;
-    }
-
-    public void setCurrentChargeTime(Long currentChargeTime) {
-        this.currentChargeTime = currentChargeTime;
-    }
-
-    public Double getCurrentChargeAmount() {
-        return currentChargeAmount;
-    }
-
-    public void setCurrentChargeAmount(Double currentChargeAmount) {
-        this.currentChargeAmount = currentChargeAmount;
-    }
-
-    public ReportInfo getReport() {
-        return report;
-    }
-
-    public void setReport(ReportInfo report) {
-        this.report = report;
-    }
 }

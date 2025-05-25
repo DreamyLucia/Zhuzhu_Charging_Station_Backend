@@ -1,8 +1,11 @@
 package org.zhuzhu_charging_station_backend.entity;
 
+import lombok.Data;
+
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 public class Order {
     @Id
@@ -43,47 +46,4 @@ public class Order {
 
     @Column(nullable = false)
     private Double totalFee; // 总费用
-
-    public Order() {}
-
-    // Getters & Setters
-
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
-
-    public Long getChargingStationId() { return chargingStationId; }
-    public void setChargingStationId(Long chargingStationId) { this.chargingStationId = chargingStationId; }
-
-    public Integer getMode() { return mode; }
-    public void setMode(Integer mode) { this.mode = mode; }
-
-    public LocalDateTime getRecordTime() { return recordTime; }
-    public void setRecordTime(LocalDateTime recordTime) { this.recordTime = recordTime; }
-
-    public Integer getStatus() { return status; }
-    public void setStatus(Integer status) { this.status = status; }
-
-    public Double getChargeAmount() { return chargeAmount; }
-    public void setChargeAmount(Double chargeAmount) { this.chargeAmount = chargeAmount; }
-
-    public Long getChargeDuration() { return chargeDuration; }
-    public void setChargeDuration(Long chargeDuration) { this.chargeDuration = chargeDuration; }
-
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
-
-    public LocalDateTime getStopTime() { return stopTime; }
-    public void setStopTime(LocalDateTime stopTime) { this.stopTime = stopTime; }
-
-    public Double getChargeFee() { return chargeFee; }
-    public void setChargeFee(Double chargeFee) { this.chargeFee = chargeFee; }
-
-    public Double getServiceFee() { return serviceFee; }
-    public void setServiceFee(Double serviceFee) { this.serviceFee = serviceFee; }
-
-    public Double getTotalFee() { return totalFee; }
-    public void setTotalFee(Double totalFee) { this.totalFee = totalFee; }
 }
