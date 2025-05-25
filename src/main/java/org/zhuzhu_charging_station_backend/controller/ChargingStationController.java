@@ -45,7 +45,7 @@ public class ChargingStationController {
         return StandardResponse.success(chargingStationService.upsertChargingStation(request));
     }
 
-    @PostMapping("/{id}/repair")
+    @PutMapping("/{id}/repair")
     @Operation(summary = "维修充电桩")
     public StandardResponse<Void> repair(@PathVariable Long id) {
         chargingStationService.repairChargingStation(id);

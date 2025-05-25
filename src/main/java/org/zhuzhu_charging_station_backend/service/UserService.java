@@ -7,14 +7,15 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.transaction.annotation.Transactional;
+import org.zhuzhu_charging_station_backend.dto.UserRequest;
 import org.zhuzhu_charging_station_backend.dto.UserResponse;
+import org.zhuzhu_charging_station_backend.dto.LoginResponse;
 import org.zhuzhu_charging_station_backend.entity.User;
 import org.zhuzhu_charging_station_backend.exception.AlreadyExistsException;
 import org.zhuzhu_charging_station_backend.repository.UserRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
 import org.zhuzhu_charging_station_backend.util.PasswordUtil;
-import org.zhuzhu_charging_station_backend.dto.StandardResponse;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityManager;
@@ -32,8 +33,15 @@ public class UserService {
         this.jwtTokenUtil = jwtTokenUtil;
     }
 
+    /**
+     * 用户注册（注册成功后自动登录，返回token和用户信息）
+     * @param request 用户请求体，包含用户名与密码
+     * @return 登录响应体（含token及用户信息）
+     */
     @Transactional
-    public StandardResponse<UserResponse> register(String username, String password) {
+    public LoginResponse registerAndLogin(UserRequest request) {
+        String username = request.getUsername();
+        String password = request.getPassword();
         try {
             // 1. 检查用户名唯一性
             if (userRepository.existsByUsername(username)) {
@@ -58,9 +66,12 @@ public class UserService {
             // 强制从数据库中重新加载实体对象
             entityManager.refresh(user);
 
-            // 4. 返回UserResponse
-            logger.info("用户注册成功，ID: {}, Created At: {}, Updated At: {}", userId, user.getCreatedAt(), user.getUpdatedAt());
-            return StandardResponse.success(new UserResponse(user));
+            // 自动生成token
+            String token = jwtTokenUtil.generateToken(user);
+
+            // 4. 返回LoginResponse（含token和用户信息）
+            logger.info("用户注册并自动登录成功，ID: {}, Created At: {}, Updated At: {}", userId, user.getCreatedAt(), user.getUpdatedAt());
+            return new LoginResponse(token, new UserResponse(user));
 
         } catch (DataIntegrityViolationException e) {
             logger.error("数据冲突: {}", e.getMessage());
@@ -71,16 +82,64 @@ public class UserService {
         }
     }
 
+    /**
+     * 用户登录
+     * @param request 用户请求体，包含用户名与密码
+     * @return 登录响应体（含token及用户信息）
+     */
     @Transactional(readOnly = true)
-    public String login(String username, String password) {
+    public LoginResponse loginWithToken(UserRequest request) {
+        String username = request.getUsername();
+        String password = request.getPassword();
+
+        // 查询用户
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("用户名或密码错误"));
 
+        // 校验密码
         if (!PasswordUtil.matches(password, user.getPassword())) {
             throw new BadCredentialsException("用户名或密码错误");
         }
         logger.info("用户验证成功");
 
-        return jwtTokenUtil.generateToken(user);
+        // 生成token
+        String token = jwtTokenUtil.generateToken(user);
+
+        return new LoginResponse(token, new UserResponse(user));
+    }
+
+    /**
+     * 修改当前用户信息
+     * @param userId 用户ID
+     * @param newUsername 新的用户名
+     * @return 用户响应体
+     */
+    @Transactional
+    public UserResponse updateUsername(Long userId, String newUsername) {
+        if (userRepository.existsByUsername(newUsername)) {
+            throw new AlreadyExistsException("用户名已存在");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("用户不存在"));
+        user.setUsername(newUsername);
+        userRepository.save(user);
+        return new UserResponse(user);
+    }
+
+    /**
+     * 修改当前用户密码
+     * @param userId 用户ID
+     * @param oldPassword 旧密码
+     * @param newPassword 新密码
+     */
+    @Transactional
+    public void updatePassword(Long userId, String oldPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("用户不存在"));
+        if (!PasswordUtil.matches(oldPassword, user.getPassword())) {
+            throw new BadCredentialsException("旧密码错误");
+        }
+        user.setPassword(PasswordUtil.encode(newPassword));
+        userRepository.save(user);
     }
 }
