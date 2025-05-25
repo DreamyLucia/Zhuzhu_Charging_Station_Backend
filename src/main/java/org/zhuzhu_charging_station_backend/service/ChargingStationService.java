@@ -1,6 +1,7 @@
 package org.zhuzhu_charging_station_backend.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationResponse;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationUpsertRequest;
 import org.zhuzhu_charging_station_backend.entity.ChargingStation;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.zhuzhu_charging_station_backend.exception.NotFoundException;
 
 @Service
 @RequiredArgsConstructor
@@ -77,7 +79,7 @@ public class ChargingStationService {
             // 修改流程
             id = request.getId();
             station = chargingStationRepository.findById(id)
-                    .orElseThrow(() -> new RuntimeException("充电桩不存在"));
+                    .orElseThrow(() -> new NotFoundException("充电桩不存在"));
             if (request.getName() != null) station.setName(request.getName());
             if (request.getMode() != null) station.setMode(request.getMode());
             if (request.getPower() != null) station.setPower(request.getPower());
@@ -133,7 +135,11 @@ public class ChargingStationService {
      * @param id 充电桩ID
      */
     public void deleteChargingStation(Long id) {
-        chargingStationRepository.deleteById(id);
+        try {
+            chargingStationRepository.deleteById(id);
+        } catch (EmptyResultDataAccessException e) {
+            throw new NotFoundException("充电桩不存在，无法删除");
+        }
         slotRedisTemplate.delete(slotKey(id));
     }
 
@@ -142,6 +148,9 @@ public class ChargingStationService {
      * @param id 充电桩ID
      */
     public void repairChargingStation(Long id) {
+        if (!chargingStationRepository.existsById(id)) {
+            throw new NotFoundException("充电桩不存在，无法维修");
+        }
         ChargingStationSlot slot = slotRedisTemplate.opsForValue().get(slotKey(id));
         if (slot == null) {
             slot = new ChargingStationSlot();
@@ -164,7 +173,7 @@ public class ChargingStationService {
      */
     public ChargingStationResponse getChargingStationWithSlot(Long id) {
         ChargingStation station = chargingStationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("充电桩不存在"));
+                .orElseThrow(() -> new NotFoundException("充电桩不存在"));
         ChargingStationSlot slot = slotRedisTemplate.opsForValue().get(slotKey(id));
         return new ChargingStationResponse(
                 station.getId(),
