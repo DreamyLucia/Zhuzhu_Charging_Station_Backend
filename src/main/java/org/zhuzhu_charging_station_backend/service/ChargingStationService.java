@@ -49,6 +49,9 @@ public class ChargingStationService {
             station.setName(request.getName());
             station.setMode(request.getMode());
             station.setPower(request.getPower());
+            station.setServiceFee(request.getServiceFee());
+            station.setUnitPrices(request.getUnitPrices());
+            station.setMaxQueueLength(request.getMaxQueueLength());
 
             // 初始化报表对象ReportInfo
             ReportInfo report = new ReportInfo();
@@ -84,6 +87,9 @@ public class ChargingStationService {
                     saved.getName(),
                     saved.getMode(),
                     saved.getPower(),
+                    saved.getServiceFee(),
+                    saved.getUnitPrices(),
+                    saved.getMaxQueueLength(),
                     slot,
                     saved.getReport()
             );
@@ -95,6 +101,9 @@ public class ChargingStationService {
             if (request.getName() != null) station.setName(request.getName());
             if (request.getMode() != null) station.setMode(request.getMode());
             if (request.getPower() != null) station.setPower(request.getPower());
+            if(request.getServiceFee()!=null) station.setServiceFee(request.getServiceFee());
+            if(request.getUnitPrices()!=null) station.setUnitPrices(request.getUnitPrices());
+            if(request.getMaxQueueLength()!=null) station.setMaxQueueLength(request.getMaxQueueLength());
             ChargingStation saved = chargingStationRepository.save(station);
 
             // 获取并更新slot
@@ -140,6 +149,9 @@ public class ChargingStationService {
                     saved.getName(),
                     saved.getMode(),
                     saved.getPower(),
+                    saved.getServiceFee(),
+                    saved.getUnitPrices(),
+                    saved.getMaxQueueLength(),
                     slot,
                     saved.getReport()
             );
@@ -192,9 +204,23 @@ public class ChargingStationService {
                 station.getName(),
                 station.getMode(),
                 station.getPower(),
+                station.getServiceFee(),
+                station.getUnitPrices(),
+                station.getMaxQueueLength(),
                 slot,
                 station.getReport()
         );
+    }
+
+    /**
+     * 查询所有充电桩的 ID 列表
+     * @return 充电桩 ID 列表
+     */
+    public List<Long> getAllStationIds() {
+        return chargingStationRepository.findAll()
+                .stream()
+                .map(ChargingStation::getId)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -216,6 +242,9 @@ public class ChargingStationService {
                 station.getName(),
                 station.getMode(),
                 station.getPower(),
+                station.getServiceFee(),
+                station.getUnitPrices(),
+                station.getMaxQueueLength(),
                 slot,
                 station.getReport()
         );
@@ -238,6 +267,9 @@ public class ChargingStationService {
                             station.getName(),
                             station.getMode(),
                             station.getPower(),
+                            station.getServiceFee(),
+                            station.getUnitPrices(),
+                            station.getMaxQueueLength(),
                             slot,
                             station.getReport()
                     );

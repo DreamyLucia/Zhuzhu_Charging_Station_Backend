@@ -7,6 +7,6 @@ import java.util.List;
 public class ChargingStationSlot {
     // 实时状态
     private ChargingStationStatus status;
-    // 排队中的订单ID队列（只包含未完成的订单）
+    // 排队中的订单ID队列
     private List<Long> queue;
 }

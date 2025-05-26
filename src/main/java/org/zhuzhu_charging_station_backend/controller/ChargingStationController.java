@@ -26,6 +26,12 @@ public class ChargingStationController {
         return StandardResponse.success(chargingStationService.getAllChargingStationWithSlot());
     }
 
+    @GetMapping("/ids")
+    @Operation(summary = "获取所有充电桩的ID列表")
+    public StandardResponse<List<Long>> getAllStationIds() {
+        return StandardResponse.success(chargingStationService.getAllStationIds());
+    }
+
     @GetMapping("/{id}/slot")
     @Operation(summary = "获取某个充电桩的完整信息")
     public StandardResponse<ChargingStationResponse> getStation(@PathVariable Long id) {
