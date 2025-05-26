@@ -47,6 +47,7 @@ public class ChargingStationService {
             station = new ChargingStation();
             station.setId(id);
             station.setName(request.getName());
+            station.setDescription(request.getDescription());
             station.setMode(request.getMode());
             station.setPower(request.getPower());
             station.setServiceFee(request.getServiceFee());
@@ -85,6 +86,7 @@ public class ChargingStationService {
                     now,
                     saved.getId(),
                     saved.getName(),
+                    saved.getDescription(),
                     saved.getMode(),
                     saved.getPower(),
                     saved.getServiceFee(),
@@ -99,6 +101,7 @@ public class ChargingStationService {
             station = chargingStationRepository.findById(id)
                     .orElseThrow(() -> new NotFoundException("充电桩不存在"));
             if (request.getName() != null) station.setName(request.getName());
+            if (request.getDescription() != null) station.setDescription(request.getDescription());
             if (request.getMode() != null) station.setMode(request.getMode());
             if (request.getPower() != null) station.setPower(request.getPower());
             if(request.getServiceFee()!=null) station.setServiceFee(request.getServiceFee());
@@ -147,6 +150,7 @@ public class ChargingStationService {
                     now,
                     saved.getId(),
                     saved.getName(),
+                    saved.getDescription(),
                     saved.getMode(),
                     saved.getPower(),
                     saved.getServiceFee(),
@@ -202,6 +206,7 @@ public class ChargingStationService {
                 now,
                 station.getId(),
                 station.getName(),
+                station.getDescription(),
                 station.getMode(),
                 station.getPower(),
                 station.getServiceFee(),
@@ -240,6 +245,7 @@ public class ChargingStationService {
                 now,
                 station.getId(),
                 station.getName(),
+                station.getDescription(),
                 station.getMode(),
                 station.getPower(),
                 station.getServiceFee(),
@@ -265,6 +271,7 @@ public class ChargingStationService {
                             now,
                             station.getId(),
                             station.getName(),
+                            station.getDescription(),
                             station.getMode(),
                             station.getPower(),
                             station.getServiceFee(),

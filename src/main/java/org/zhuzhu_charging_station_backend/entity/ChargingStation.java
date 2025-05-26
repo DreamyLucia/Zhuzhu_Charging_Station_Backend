@@ -15,6 +15,9 @@ public class ChargingStation {
     @Column(nullable = false, unique = true)
     private String name; // 充电桩名字
 
+    @Column(columnDefinition = "TEXT")
+    private String description; // 充电桩描述
+
     @Column(nullable = false)
     private Integer mode; // 充电模式，0：慢充，1：快充
 

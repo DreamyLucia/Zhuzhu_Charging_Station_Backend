@@ -15,6 +15,7 @@ public class ChargingStationResponse {
     private LocalDateTime queriedAt;             // 本次响应的查询时间
     private Long id;
     private String name;
+    private String description;                  // 充电桩描述
     private Integer mode;
     private Double power;
     private Double serviceFee;                   // 服务费单价

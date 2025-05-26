@@ -13,6 +13,7 @@ import java.util.List;
 public class ChargingStationUpsertRequest {
     private Long id;                             // ID，null 表示创建，否则为修改
     private String name;                         // 名字
+    private String description;                  // 充电桩描述
     private Integer mode;                        // 充电模式
     private Double power;                        // 功率
     private Double serviceFee;                   // 服务费单价
