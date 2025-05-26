@@ -3,11 +3,9 @@ package org.zhuzhu_charging_station_backend.controller;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.swagger.v3.oas.annotations.*;
 import org.zhuzhu_charging_station_backend.dto.*;
-import org.zhuzhu_charging_station_backend.entity.*;
 import org.zhuzhu_charging_station_backend.service.ChargingStationService;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -49,6 +47,13 @@ public class ChargingStationController {
     @Operation(summary = "新增或修改充电桩（ID为空为新增，否则为更新）")
     public StandardResponse<ChargingStationResponse> upsert(@RequestBody ChargingStationUpsertRequest request) {
         return StandardResponse.success(chargingStationService.upsertChargingStation(request));
+    }
+
+    @PutMapping("/{id}/break")
+    @Operation(summary = "模拟充电桩故障（只能改变status为故障，不能修改其他信息）")
+    public StandardResponse<ChargingStationResponse> breakStation(@PathVariable Long id) {
+        ChargingStationResponse response = chargingStationService.breakChargingStation(id);
+        return StandardResponse.success(response);
     }
 
     @PutMapping("/{id}/repair")
