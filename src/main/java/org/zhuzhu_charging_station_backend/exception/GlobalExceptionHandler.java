@@ -24,6 +24,15 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 业务无权限异常（用于鉴权失败时主动抛出），返回403
+     */
+    @ExceptionHandler(ForbiddenException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public StandardResponse<?> handleForbiddenException(ForbiddenException e) {
+        return StandardResponse.error(403, e.getMessage());
+    }
+
+    /**
      * 捕获查无/删无等资源不存在异常，返回404
      */
     @ExceptionHandler(NotFoundException.class)

@@ -10,6 +10,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.zhuzhu_charging_station_backend.entity.ChargingStationSlot;
+import org.zhuzhu_charging_station_backend.entity.Order;
 
 @Configuration
 public class RedisConfig {
@@ -25,6 +26,31 @@ public class RedisConfig {
         // JSON序列化器
         Jackson2JsonRedisSerializer<ChargingStationSlot> serializer =
                 new Jackson2JsonRedisSerializer<>(ChargingStationSlot.class);
+        ObjectMapper om = new ObjectMapper();
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.activateDefaultTyping(om.getPolymorphicTypeValidator(), ObjectMapper.DefaultTyping.NON_FINAL);
+        serializer.setObjectMapper(om);
+
+        // 设置value序列化方式
+        template.setValueSerializer(serializer);
+        template.setHashValueSerializer(serializer);
+
+        template.afterPropertiesSet();
+        return template;
+    }
+
+    @Bean
+    public RedisTemplate<String, Order> orderRedisTemplate(RedisConnectionFactory factory) {
+        RedisTemplate<String, Order> template = new RedisTemplate<>();
+        template.setConnectionFactory(factory);
+
+        // 设置 key 序列化
+        template.setKeySerializer(new StringRedisSerializer());
+        template.setHashKeySerializer(new StringRedisSerializer());
+
+        // JSON序列化器
+        Jackson2JsonRedisSerializer<Order> serializer =
+                new Jackson2JsonRedisSerializer<>(Order.class);
         ObjectMapper om = new ObjectMapper();
         om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         om.activateDefaultTyping(om.getPolymorphicTypeValidator(), ObjectMapper.DefaultTyping.NON_FINAL);
