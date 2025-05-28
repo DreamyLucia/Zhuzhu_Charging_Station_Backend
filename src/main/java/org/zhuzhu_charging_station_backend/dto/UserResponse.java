@@ -25,11 +25,35 @@ public class UserResponse {
     @Schema(description = "更新时间", example = "2023-01-01T00:00:00")
     private LocalDateTime updatedAt;
 
+    @Schema(description = "累计充电次数", example = "100")
+    private Integer totalChargeCount;
+
+    @Schema(description = "累计充电电量", example = "1500.5")
+    private Double totalChargeAmount;
+
+    @Schema(description = "累计充电时长（秒）", example = "36000")
+    private Long totalChargeDuration;
+
+    @Schema(description = "累计充电费用", example = "1200.00")
+    private Double totalChargeFee;
+
+    @Schema(description = "累计服务费用", example = "200.00")
+    private Double totalServiceFee;
+
+    @Schema(description = "累计总费用", example = "1400.00")
+    private Double totalFee;
+
     public UserResponse(User user) {
         this.userId = user.getUserId();
         this.username = user.getUsername();
         this.roles = Arrays.asList(user.getRoles().split(",")); // 将逗号分隔的字符串转为List
         this.createdAt = user.getCreatedAt();
         this.updatedAt = user.getUpdatedAt();
+        this.totalChargeCount = user.getTotalChargeCount();
+        this.totalChargeAmount = user.getTotalChargeAmount();
+        this.totalChargeDuration = user.getTotalChargeDuration();
+        this.totalChargeFee = user.getTotalChargeFee();
+        this.totalServiceFee = user.getTotalServiceFee();
+        this.totalFee = user.getTotalFee();
     }
 }
