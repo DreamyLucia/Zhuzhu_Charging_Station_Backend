@@ -13,20 +13,17 @@ import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
 import org.zhuzhu_charging_station_backend.exception.NotFoundException;
 import org.zhuzhu_charging_station_backend.exception.ForbiddenException;
-import org.zhuzhu_charging_station_backend.websocket.OrderWebSocketHandler;
 
 import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class OrderService {
     private final QueueService queueService;
     private final OrderCacheService orderCacheService;
     private final OrderRepository orderRepository;
     private final JwtTokenUtil jwtTokenUtil;
     private final ChargingStationService chargingStationService;
-    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
 
     /**
      * 新建或修改订单，自动分配（新）排队号并存入redis
