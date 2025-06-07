@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.zhuzhu_charging_station_backend.dto.StandardResponse;
+import io.jsonwebtoken.JwtException;
 
 /**
  * 全局异常处理器，统一格式化所有Controller抛出的异常
@@ -21,6 +22,15 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public StandardResponse<?> handleAuthException(RuntimeException e) {
         return StandardResponse.error(401, e.getMessage());
+    }
+
+    /**
+     * token 非法/失效时，返回401
+     */
+    @ExceptionHandler(JwtException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public StandardResponse<?> handleJwtException(JwtException e) {
+        return StandardResponse.error(401, "令牌无效或已过期");
     }
 
     /**

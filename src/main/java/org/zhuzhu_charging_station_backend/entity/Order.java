@@ -28,10 +28,13 @@ public class Order {
     private LocalDateTime recordTime; // 详单生成时间
 
     @Column(nullable = false)
-    private Integer status; // 订单状态，0:已完成，1:进行中，2：排队中，3：已取消
+    private Integer status; // 订单状态，0:已完成，1:进行中，2：排队中，3：等待中，4：已取消
 
     @Column(nullable = true)
     private Double chargeAmount; // 充电电量
+
+    @Column(nullable = true)
+    private Double actualCharge; // 已充电量
 
     @Column(nullable = true)
     private Long chargeDuration; // 充电时长

@@ -10,7 +10,6 @@ import org.zhuzhu_charging_station_backend.dto.OrderUpsertRequest;
 import org.zhuzhu_charging_station_backend.dto.StandardResponse;
 import org.zhuzhu_charging_station_backend.entity.Order;
 import org.zhuzhu_charging_station_backend.service.OrderService;
-import org.zhuzhu_charging_station_backend.service.OrderService.FinishInfo;
 
 @Component
 @RequiredArgsConstructor
@@ -36,9 +35,8 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
                 sendResponse(session, StandardResponse.success("订单已取消"));
             } else if ("finish".equals(type)) {
                 Long orderId = root.get("data").get("orderId").asLong();
-                FinishInfo finishInfo = objectMapper.treeToValue(root.get("data").get("finishInfo"), FinishInfo.class);
-                orderService.finishOrder(orderId, token, finishInfo);
-                sendResponse(session, StandardResponse.success("订单已结束"));
+                Order order = orderService.finishOrder(orderId, token);
+                sendResponse(session, StandardResponse.success(order));
             } else {
                 sendResponse(session, StandardResponse.error(400, "未知type: " + type));
             }

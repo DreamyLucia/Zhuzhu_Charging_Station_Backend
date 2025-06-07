@@ -12,7 +12,6 @@ import org.zhuzhu_charging_station_backend.entity.ReportInfo;
 import org.zhuzhu_charging_station_backend.exception.AlreadyExistsException;
 import org.zhuzhu_charging_station_backend.repository.ChargingStationRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -26,7 +25,7 @@ import org.zhuzhu_charging_station_backend.exception.NotFoundException;
 public class ChargingStationService {
 
     private final ChargingStationRepository chargingStationRepository;
-    private final RedisTemplate<String, ChargingStationSlot> slotRedisTemplate;
+    private final ChargingStationSlotService chargingStationSlotService;
 
     /**
      * 新增或更新充电桩基础信息，并同步维护实时状态与报表数据。
@@ -71,7 +70,7 @@ public class ChargingStationService {
 
             // 初始化slot记录
             ChargingStationSlot slot = getOrInitSlot(id);
-            slotRedisTemplate.opsForValue().set(slotKey(id), slot);
+            chargingStationSlotService.setSlot(id, slot);
 
             return buildChargingStationResponse(saved, slot);
         } else {
@@ -80,38 +79,42 @@ public class ChargingStationService {
             station = chargingStationRepository.findById(id)
                     .orElseThrow(() -> new NotFoundException("充电桩不存在"));
 
-            // 限制：充电桩在使用中不可更改信息
-            ChargingStationSlot slot = getOrInitSlot(id);
-            ChargingStationStatus status = slot.getStatus();
-            if (status == null) {
-                throw new IllegalStateException("充电桩实时状态初始化失败");
-            }
-            if (status.getStatus() != null && status.getStatus() == 1) {
-                throw new AlreadyExistsException("充电桩正在使用中，禁止修改信息");
-            }
-
-            // 基础信息更新
-            if (request.getName() != null) station.setName(request.getName());
-            if (request.getDescription() != null) station.setDescription(request.getDescription());
-            if (request.getMode() != null) station.setMode(request.getMode());
-            if (request.getPower() != null) station.setPower(request.getPower());
-            if(request.getServiceFee()!=null) station.setServiceFee(request.getServiceFee());
-            if(request.getUnitPrices()!=null) station.setUnitPrices(request.getUnitPrices());
-            if(request.getMaxQueueLength()!=null) station.setMaxQueueLength(request.getMaxQueueLength());
-            ChargingStation saved = chargingStationRepository.save(station);
-
-            if (request.getStatus() != null) {
-                status.setStatus(request.getStatus());
-                if (request.getStatus() == 2) { // 2 = 关闭，重置实时统计计数
-                    status.setCurrentChargeCount(0);
-                    status.setCurrentChargeTime(0L);
-                    status.setCurrentChargeAmount(0D);
+            // 用分布式锁包裹所有的“能否修改”检查和slot修改
+            chargingStationSlotService.updateSlotWithLock(id, slot -> {
+                ChargingStationStatus status = slot.getStatus();
+                if (status == null) {
+                    throw new IllegalStateException("充电桩实时状态初始化失败");
                 }
-            }
-            slot.setStatus(status);
-            slotRedisTemplate.opsForValue().set(slotKey(id), slot);
+                // 充电桩"使用中"禁止一切变更（基础信息+slot状态）
+                if (status.getStatus() != null && status.getStatus() == 1) {
+                    throw new AlreadyExistsException("充电桩正在使用中，禁止修改所有信息");
+                }
+                // 可以修改slot状态
+                if (request.getStatus() != null) {
+                    status.setStatus(request.getStatus());
+                    if (request.getStatus() == 2) { // 2 = 关闭
+                        status.setCurrentChargeCount(0);
+                        status.setCurrentChargeTime(0L);
+                        status.setCurrentChargeAmount(0D);
+                    }
+                }
+                slot.setStatus(status);
 
-            return buildChargingStationResponse(saved, slot);
+                // 可以改数据库基础属性
+                if (request.getName() != null) station.setName(request.getName());
+                if (request.getDescription() != null) station.setDescription(request.getDescription());
+                if (request.getMode() != null) station.setMode(request.getMode());
+                if (request.getPower() != null) station.setPower(request.getPower());
+                if (request.getServiceFee() != null) station.setServiceFee(request.getServiceFee());
+                if (request.getUnitPrices() != null) station.setUnitPrices(request.getUnitPrices());
+                if (request.getMaxQueueLength() != null) station.setMaxQueueLength(request.getMaxQueueLength());
+
+                // 只有允许修改时才做save
+                chargingStationRepository.save(station);
+            });
+
+            ChargingStationSlot slot = chargingStationSlotService.getSlot(id);
+            return buildChargingStationResponse(station, slot);
         }
     }
 
@@ -126,7 +129,7 @@ public class ChargingStationService {
         } catch (EmptyResultDataAccessException e) {
             throw new NotFoundException("充电桩不存在，无法删除");
         }
-        slotRedisTemplate.delete(slotKey(id));
+        chargingStationSlotService.removeSlot(id);
     }
 
     /**
@@ -139,12 +142,14 @@ public class ChargingStationService {
         ChargingStation station = chargingStationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("充电桩不存在，无法置为故障"));
 
-        ChargingStationSlot slot = getOrInitSlot(id);
-        ChargingStationStatus status = slot.getStatus();
-        status.setStatus(3); // 3=故障
-        slot.setStatus(status);
-        slotRedisTemplate.opsForValue().set(slotKey(id), slot);
+        chargingStationSlotService.updateSlotWithLock(id, slot -> {
+            ChargingStationStatus status = slot.getStatus();
+            if (status == null) status = new ChargingStationStatus();
+            status.setStatus(3); // 3=故障
+            slot.setStatus(status);
+        });
 
+        ChargingStationSlot slot = chargingStationSlotService.getSlot(id);
         return buildChargingStationResponse(station, slot);
     }
 
@@ -158,12 +163,14 @@ public class ChargingStationService {
         ChargingStation station = chargingStationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("充电桩不存在，无法维修"));
 
-        ChargingStationSlot slot = getOrInitSlot(id);
-        ChargingStationStatus status = slot.getStatus();
-        status.setStatus(0); // 0=空闲
-        slot.setStatus(status);
-        slotRedisTemplate.opsForValue().set(slotKey(id), slot);
+        chargingStationSlotService.updateSlotWithLock(id, slot -> {
+            ChargingStationStatus status = slot.getStatus();
+            if (status == null) status = new ChargingStationStatus();
+            status.setStatus(0); // 0=空闲
+            slot.setStatus(status);
+        });
 
+        ChargingStationSlot slot = chargingStationSlotService.getSlot(id);
         return buildChargingStationResponse(station, slot);
     }
 
@@ -200,19 +207,9 @@ public class ChargingStationService {
         return stations.stream()
                 .map(station -> {
                     ChargingStationSlot slot = getOrInitSlot(station.getId());
-
                     return buildChargingStationResponse(station, slot);
                 })
                 .collect(Collectors.toList());
-    }
-
-    /**
-     * 生成Slot在Redis中的唯一键
-     * @param id 充电桩ID
-     * @return Redis key
-     */
-    private String slotKey(Long id) {
-        return "charging_station_slot:" + id;
     }
 
     /**
@@ -221,9 +218,11 @@ public class ChargingStationService {
      * @return 充电桩slot
      */
     private ChargingStationSlot getOrInitSlot(Long id) {
-        ChargingStationSlot slot = slotRedisTemplate.opsForValue().get(slotKey(id));
+        ChargingStationSlot slot = chargingStationSlotService.getSlot(id);
+        boolean needSet = false;
         if (slot == null) {
             slot = new ChargingStationSlot();
+            needSet = true;
         }
         if (slot.getStatus() == null) {
             ChargingStationStatus status = new ChargingStationStatus();
@@ -232,9 +231,14 @@ public class ChargingStationService {
             status.setCurrentChargeTime(0L);
             status.setCurrentChargeAmount(0D);
             slot.setStatus(status);
+            needSet = true;
         }
         if (slot.getQueue() == null) {
             slot.setQueue(new ArrayList<>());
+            needSet = true;
+        }
+        if (needSet) {
+            chargingStationSlotService.setSlot(id, slot);
         }
         return slot;
     }

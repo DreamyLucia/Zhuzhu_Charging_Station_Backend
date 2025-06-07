@@ -47,13 +47,6 @@ public class JwtTokenUtil {
                 .compact();
     }
 
-    // 验证 Token
-    public boolean validateToken(String token, UserDetails userDetails) {
-        final String subject = extractClaim(token, Claims::getSubject);
-        return subject.equals(((User) userDetails).getUserId().toString())
-                && !isTokenExpired(token);
-    }
-
     // 从Token中提取用户ID
     public Long extractUserId(String token) {
         return Long.parseLong(extractClaim(token, Claims::getSubject));
