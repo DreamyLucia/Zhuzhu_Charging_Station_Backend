@@ -1,14 +1,15 @@
 package org.zhuzhu_charging_station_backend.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationContext;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.transaction.annotation.Transactional;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationResponse;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationUpsertRequest;
-import org.zhuzhu_charging_station_backend.entity.ChargingStation;
-import org.zhuzhu_charging_station_backend.entity.ChargingStationSlot;
-import org.zhuzhu_charging_station_backend.entity.ChargingStationStatus;
-import org.zhuzhu_charging_station_backend.entity.ReportInfo;
+import org.zhuzhu_charging_station_backend.entity.*;
 import org.zhuzhu_charging_station_backend.exception.AlreadyExistsException;
 import org.zhuzhu_charging_station_backend.repository.ChargingStationRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
@@ -24,6 +25,8 @@ import org.zhuzhu_charging_station_backend.exception.NotFoundException;
 @RequiredArgsConstructor
 public class ChargingStationService {
 
+    @Autowired
+    private ApplicationContext applicationContext;
     private final ChargingStationRepository chargingStationRepository;
     private final ChargingStationSlotService chargingStationSlotService;
 
@@ -33,6 +36,7 @@ public class ChargingStationService {
      * @return 充电桩完整信息（含基础属性、slot、报表信息）
      */
     @Transactional
+    @CacheEvict(value = {"chargingStationBase", "chargingStationResponsesAllId"}, allEntries = true)
     public ChargingStationResponse upsertChargingStation(ChargingStationUpsertRequest request) {
         ChargingStation station;
         boolean isCreate = (request.getId() == null);
@@ -52,12 +56,14 @@ public class ChargingStationService {
             station.setMode(request.getMode());
             station.setPower(request.getPower());
             station.setServiceFee(request.getServiceFee());
-            station.setUnitPrices(request.getUnitPrices());
+            station.setPeakPrice(request.getPeakPrice());
+            station.setNormalPrice(request.getNormalPrice());
+            station.setValleyPrice(request.getValleyPrice());
             station.setMaxQueueLength(request.getMaxQueueLength());
 
             // 初始化报表对象ReportInfo
             ReportInfo report = new ReportInfo();
-            report.setUpdatedAt(LocalDateTime.now().withNano(0));
+            report.setUpdatedAt(LocalDateTime.now());
             report.setTotalChargeCount(0);
             report.setTotalChargeTime(0L);
             report.setTotalChargeAmount(0D);
@@ -106,7 +112,9 @@ public class ChargingStationService {
                 if (request.getMode() != null) station.setMode(request.getMode());
                 if (request.getPower() != null) station.setPower(request.getPower());
                 if (request.getServiceFee() != null) station.setServiceFee(request.getServiceFee());
-                if (request.getUnitPrices() != null) station.setUnitPrices(request.getUnitPrices());
+                if (request.getPeakPrice() != null) station.setPeakPrice(request.getPeakPrice());
+                if (request.getNormalPrice() != null) station.setNormalPrice(request.getNormalPrice());
+                if (request.getValleyPrice() != null) station.setValleyPrice(request.getValleyPrice());
                 if (request.getMaxQueueLength() != null) station.setMaxQueueLength(request.getMaxQueueLength());
 
                 // 只有允许修改时才做save
@@ -123,6 +131,7 @@ public class ChargingStationService {
      * @param id 充电桩ID
      */
     @Transactional
+    @CacheEvict(value = {"chargingStationBase", "chargingStationResponsesAllId"}, allEntries = true)
     public void deleteChargingStation(Long id) {
         try {
             chargingStationRepository.deleteById(id);
@@ -178,6 +187,7 @@ public class ChargingStationService {
      * 查询所有充电桩的 ID 列表
      * @return 充电桩 ID 列表
      */
+    @Cacheable(value = "chargingStationResponsesAllId")
     public List<Long> getAllStationIds() {
         return chargingStationRepository.findAll()
                 .stream()
@@ -188,11 +198,22 @@ public class ChargingStationService {
     /**
      * 查询指定充电桩全部信息（含slot和报表信息）
      * @param id 充电桩ID
+     * @return 充电桩静态响应对象
+     */
+    @Cacheable(value = "chargingStationBase", key = "#id")
+    public ChargingStation getChargingStationBase(Long id) {
+        return chargingStationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("充电桩不存在"));
+    }
+
+    /**
+     * 查询指定充电桩全部信息（含slot和报表信息）
+     * @param id 充电桩ID
      * @return 充电桩响应对象
      */
     public ChargingStationResponse getChargingStationWithSlot(Long id) {
-        ChargingStation station = chargingStationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("充电桩不存在"));
+        ChargingStationService proxy = applicationContext.getBean(ChargingStationService.class);
+        ChargingStation station = proxy.getChargingStationBase(id); // 这样走代理，@Cacheable生效
         ChargingStationSlot slot = getOrInitSlot(id);
 
         return buildChargingStationResponse(station, slot);
@@ -256,7 +277,9 @@ public class ChargingStationService {
                 station.getMode(),
                 station.getPower(),
                 station.getServiceFee(),
-                station.getUnitPrices(),
+                station.getPeakPrice(),
+                station.getNormalPrice(),
+                station.getValleyPrice(),
                 station.getMaxQueueLength(),
                 slot,
                 station.getReport()
