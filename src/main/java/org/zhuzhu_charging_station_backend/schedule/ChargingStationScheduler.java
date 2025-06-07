@@ -115,13 +115,12 @@ public class ChargingStationScheduler {
 
         // 每秒推进
         order.setChargeDuration(order.getChargeDuration() + 1);
-        double addedCharge = station.getPower() / 3600.0; // 度/每秒
+        double addedCharge = station.getPower();
         order.setActualCharge(order.getActualCharge() + addedCharge);
 
         double unitPrice = calcUnitPrice(LocalTime.now(), station);
-        order.setChargeFee(order.getChargeFee() + unitPrice * addedCharge);
-        double addedService = station.getServiceFee() / 3600.0;
-        order.setServiceFee(order.getServiceFee() + addedService);
+        order.setChargeFee(order.getActualCharge() * unitPrice);
+        order.setServiceFee(order.getActualCharge() * station.getServiceFee());
         order.setTotalFee(order.getChargeFee() + order.getServiceFee());
 
         orderCacheService.saveOrder(order); // 更新缓存
@@ -134,6 +133,7 @@ public class ChargingStationScheduler {
             orderCacheService.deleteOrder(orderId); // 从缓存移除
             orderRepository.save(order); // 入库
             slot.getQueue().remove(0);
+            chargingStationSlotService.setSlot(stationId, slot); // 立即更新 slot 状态到缓存
 
             // 更新报表
             chargingStationService.updateReportInfo(order.getChargingStationId(), order);

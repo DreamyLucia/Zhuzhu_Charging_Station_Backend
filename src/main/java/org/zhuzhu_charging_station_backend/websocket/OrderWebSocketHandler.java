@@ -82,6 +82,10 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
         ScheduledFuture<?> future = executor.scheduleAtFixedRate(() -> {
             try {
                 Order order = orderService.getOrder(orderId, token);
+                if (order.getStatus() == 0) {
+                    stopPushTask(session);
+                    session.close();
+                }
                 sendResponse(session, StandardResponse.success(order)); // 发送订单状态
             } catch (Exception e) {
                 sendResponse(session, StandardResponse.error(500, "推送订单失败: " + e.getMessage()));
