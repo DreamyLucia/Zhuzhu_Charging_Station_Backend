@@ -83,6 +83,7 @@ public class ChargingStationScheduler {
             if (order.getStatus() == 3) { // 3=等待中
                 order.setStatus(2); // 2=排队中
                 order.setQueueNo(null);
+                order.setChargingStationId(stationId); // 分配充电桩
                 orderCacheService.saveOrder(order); // 更新缓存
                 queueService.removeOrderFromQueueWithLock(station.getMode(), orderIdStr);
                 slot.getQueue().add(orderId);
@@ -133,6 +134,10 @@ public class ChargingStationScheduler {
             orderCacheService.deleteOrder(orderId); // 从缓存移除
             orderRepository.save(order); // 入库
             slot.getQueue().remove(0);
+
+            // 更新报表
+            chargingStationService.updateReportInfo(order.getChargingStationId(), order);
+
             // 发消息/推送等可扩展
             log.info("订单完成: orderId={}, userId={}", order.getId(), order.getUserId());
         }

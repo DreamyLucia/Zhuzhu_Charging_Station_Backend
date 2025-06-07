@@ -16,6 +16,15 @@ import io.jsonwebtoken.JwtException;
 public class GlobalExceptionHandler {
 
     /**
+     * 业务非法操作，返回400
+     */
+    @ExceptionHandler(BadOrderStateException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public StandardResponse<?> handleBadOrderStateException(BadOrderStateException e) {
+        return StandardResponse.error(400, e.getMessage());
+    }
+
+    /**
      * 认证失败（如登录用户名/密码错误），返回401
      */
     @ExceptionHandler({UsernameNotFoundException.class, BadCredentialsException.class})

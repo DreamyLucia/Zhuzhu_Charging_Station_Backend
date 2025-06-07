@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.zhuzhu_charging_station_backend.dto.OrderUpsertRequest;
 import org.zhuzhu_charging_station_backend.entity.Order;
+import org.zhuzhu_charging_station_backend.exception.BadOrderStateException;
 import org.zhuzhu_charging_station_backend.repository.OrderRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
@@ -19,6 +20,7 @@ public class OrderService {
     private final OrderCacheService orderCacheService;
     private final OrderRepository orderRepository;
     private final JwtTokenUtil jwtTokenUtil;
+    private final ChargingStationService chargingStationService;
 
     /**
      * 新建或修改订单，自动分配（新）排队号并存入redis
@@ -65,6 +67,9 @@ public class OrderService {
         if (!userId.equals(order.getUserId())) {
             throw new ForbiddenException("无权限取消他人订单！");
         }
+        if (order.getStatus() != 2 && order.getStatus() != 3) {
+            throw new BadOrderStateException("订单当前状态不可取消！");
+        }
         queueService.removeOrderFromQueueWithLock(order.getMode(), String.valueOf(order.getId()));
         order.setStatus(4); // 4: 已取消
         orderRepository.save(order);
@@ -83,12 +88,16 @@ public class OrderService {
         if (!userId.equals(order.getUserId())) {
             throw new ForbiddenException("无权限操作他人订单！");
         }
+        if (order.getStatus() != 1) {
+            throw new BadOrderStateException("订单当前状态不可完结！");
+        }
         queueService.removeOrderFromQueueWithLock(order.getMode(), String.valueOf(order.getId()));
         // 设置完结的业务字段
         order.setStatus(0); // 0:已完成
         order.setStopTime(LocalDateTime.now());
         orderRepository.save(order);
         orderCacheService.deleteOrder(orderId);
+        chargingStationService.updateReportInfo(order.getChargingStationId(), order);
         return order;
     }
 }

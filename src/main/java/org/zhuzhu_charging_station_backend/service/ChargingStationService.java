@@ -63,7 +63,7 @@ public class ChargingStationService {
 
             // 初始化报表对象ReportInfo
             ReportInfo report = new ReportInfo();
-            report.setUpdatedAt(LocalDateTime.now());
+            report.setUpdatedAt(LocalDateTime.now().withNano(0));
             report.setTotalChargeCount(0);
             report.setTotalChargeTime(0L);
             report.setTotalChargeAmount(0D);
@@ -181,6 +181,29 @@ public class ChargingStationService {
 
         ChargingStationSlot slot = chargingStationSlotService.getSlot(id);
         return buildChargingStationResponse(station, slot);
+    }
+
+    /**
+     * 订单完成时，累计报表&驱逐缓存
+     */
+    @CacheEvict(value = "chargingStationBase", key = "#stationId")
+    public void updateReportInfo(Long stationId, Order order) {
+        ChargingStation cs = chargingStationRepository.findById(stationId)
+                .orElseThrow(() -> new NotFoundException("充电桩不存在，无法更新统计"));
+
+        LocalDateTime now = LocalDateTime.now().withNano(0);
+        ReportInfo report = cs.getReport();
+
+        report.setUpdatedAt(now);
+        report.setTotalChargeCount(report.getTotalChargeCount() + 1);
+        report.setTotalChargeTime(report.getTotalChargeTime() + order.getChargeDuration());
+        report.setTotalChargeAmount(report.getTotalChargeAmount() + order.getActualCharge());
+        report.setTotalChargeFee(report.getTotalChargeFee() + order.getChargeFee());
+        report.setTotalServiceFee(report.getTotalServiceFee() + order.getServiceFee());
+        report.setTotalFee(report.getTotalFee() + order.getTotalFee());
+        cs.setReport(report);
+
+        chargingStationRepository.save(cs);
     }
 
     /**
