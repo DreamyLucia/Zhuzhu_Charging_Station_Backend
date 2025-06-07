@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
+@Table(name = "`order`")
 public class Order {
 
     @Id
@@ -21,7 +22,7 @@ public class Order {
     @Column(nullable = false)
     private Integer mode; // 充电模式，0:慢充，1:快充
 
-    @Column(nullable = false, length = 10)
+    @Transient
     private String queueNo; // 排队号 F1/T2 等
 
     @Column(nullable = false)
