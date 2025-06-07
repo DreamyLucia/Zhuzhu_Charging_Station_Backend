@@ -18,9 +18,9 @@ public class GlobalExceptionHandler {
     /**
      * 业务非法操作，返回400
      */
-    @ExceptionHandler(BadOrderStateException.class)
+    @ExceptionHandler(BadStateException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public StandardResponse<?> handleBadOrderStateException(BadOrderStateException e) {
+    public StandardResponse<?> handleBadOrderStateException(BadStateException e) {
         return StandardResponse.error(400, e.getMessage());
     }
 

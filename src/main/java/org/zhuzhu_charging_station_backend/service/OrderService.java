@@ -1,26 +1,32 @@
 package org.zhuzhu_charging_station_backend.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.zhuzhu_charging_station_backend.dto.OrderUpsertRequest;
 import org.zhuzhu_charging_station_backend.entity.Order;
-import org.zhuzhu_charging_station_backend.exception.BadOrderStateException;
+import org.zhuzhu_charging_station_backend.exception.BadStateException;
 import org.zhuzhu_charging_station_backend.repository.OrderRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
 import org.zhuzhu_charging_station_backend.exception.NotFoundException;
 import org.zhuzhu_charging_station_backend.exception.ForbiddenException;
+import org.zhuzhu_charging_station_backend.websocket.OrderWebSocketHandler;
 
 import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
     private final QueueService queueService;
     private final OrderCacheService orderCacheService;
     private final OrderRepository orderRepository;
     private final JwtTokenUtil jwtTokenUtil;
     private final ChargingStationService chargingStationService;
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
 
     /**
      * 新建或修改订单，自动分配（新）排队号并存入redis
@@ -56,6 +62,25 @@ public class OrderService {
     }
 
     /**
+     * 查询订单
+     */
+    public Order getOrder(Long orderId, String token) {
+        Long userId = jwtTokenUtil.extractUserId(token);
+        Order order = orderCacheService.getOrder(orderId);
+        if (order == null) {
+            // Cache未命中，去数据库查
+            order = orderRepository.findById(orderId).orElse(null);
+            if (order == null) {
+                throw new NotFoundException("订单不存在！");
+            }
+        }
+        if (!userId.equals(order.getUserId())) {
+            throw new ForbiddenException("无权限查询他人订单！");
+        }
+        return order;
+    }
+
+    /**
      * 取消订单（从队列和Redis移除，并入库标记为已取消）
      */
     public void cancelOrder(Long orderId, String token) {
@@ -68,7 +93,7 @@ public class OrderService {
             throw new ForbiddenException("无权限取消他人订单！");
         }
         if (order.getStatus() != 2 && order.getStatus() != 3) {
-            throw new BadOrderStateException("订单当前状态不可取消！");
+            throw new BadStateException("订单当前状态不可取消！");
         }
         queueService.removeOrderFromQueueWithLock(order.getMode(), String.valueOf(order.getId()));
         order.setStatus(4); // 4: 已取消
@@ -89,7 +114,7 @@ public class OrderService {
             throw new ForbiddenException("无权限操作他人订单！");
         }
         if (order.getStatus() != 1) {
-            throw new BadOrderStateException("订单当前状态不可完结！");
+            throw new BadStateException("订单当前状态不可完结！");
         }
         queueService.removeOrderFromQueueWithLock(order.getMode(), String.valueOf(order.getId()));
         // 设置完结的业务字段

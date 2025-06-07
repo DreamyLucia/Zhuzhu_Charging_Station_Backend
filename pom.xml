@@ -124,6 +124,12 @@
             <artifactId>redisson-spring-data-24</artifactId>
             <version>3.28.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <version>2.12.3</version>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
