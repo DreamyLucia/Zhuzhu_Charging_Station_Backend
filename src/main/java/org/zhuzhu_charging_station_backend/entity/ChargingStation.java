@@ -35,7 +35,7 @@ public class ChargingStation {
     private BigDecimal valleyPrice;  // 谷时，23:00~7:00
 
     @Column(nullable = false)
-    private Integer maxQueueLength; // 新增：最大排队数
+    private Integer maxQueueLength; // 最大排队数
 
     @Transient
     private ChargingStationSlot slot;

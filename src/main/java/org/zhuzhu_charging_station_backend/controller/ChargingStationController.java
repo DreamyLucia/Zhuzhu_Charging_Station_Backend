@@ -56,10 +56,10 @@ public class ChargingStationController {
         return StandardResponse.success(response);
     }
 
-    @PutMapping("/{id}/repair")
-    @Operation(summary = "维修充电桩，并返回实时信息）")
+    @PutMapping("/{id}/reset")
+    @Operation(summary = "开启/维修充电桩")
     public StandardResponse<ChargingStationResponse> repair(@PathVariable Long id) {
-        ChargingStationResponse response = chargingStationService.repairChargingStation(id);
+        ChargingStationResponse response = chargingStationService.resetChargingStationStatusToIdle(id);
         return StandardResponse.success(response);
     }
 }

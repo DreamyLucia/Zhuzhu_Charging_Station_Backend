@@ -6,10 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.zhuzhu_charging_station_backend.entity.*;
 import org.zhuzhu_charging_station_backend.repository.OrderRepository;
-import org.zhuzhu_charging_station_backend.service.ChargingStationService;
-import org.zhuzhu_charging_station_backend.service.ChargingStationSlotService;
-import org.zhuzhu_charging_station_backend.service.OrderCacheService;
-import org.zhuzhu_charging_station_backend.service.QueueService;
+import org.zhuzhu_charging_station_backend.service.*;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationResponse;
 
 import java.math.BigDecimal;
@@ -21,73 +18,61 @@ import java.util.*;
 @Slf4j
 @RequiredArgsConstructor
 public class ChargingStationScheduler {
-
     private final ChargingStationService chargingStationService;
-    private final OrderRepository orderRepository;
     private final ChargingStationSlotService chargingStationSlotService;
     private final QueueService queueService;
     private final OrderCacheService orderCacheService;
+    private final OrderService orderService;
 
     @Scheduled(cron = "*/1 * * * * *") // 每秒执行一次
     public void chargingStationTask() {
         List<Long> ids = chargingStationService.getAllStationIds();
+
+        // 第一轮：全量刷新waitingTime
         for (Long id : ids) {
             try {
                 chargingStationSlotService.updateSlotWithLock(id, slot -> {
                     if (slot == null) {
                         return;
                     }
-
+                    ChargingStationResponse station = chargingStationService.getChargingStationWithSlot(id);
                     if (slot.getStatus() == null
                             || slot.getStatus().getStatus() == 2
                             || slot.getStatus().getStatus() == 3) {
                         // 桩关闭或故障
+                        releaseOrdersFromSlot(slot, station.getMode());
                         return;
                     }
-                    // Slot 业务逻辑只需要 id
-                    processQueueFill(id, slot);
+                    long waitingTime = calcWaitingTime(slot, station);
+                    slot.setWaitingTime(waitingTime);
+                    // 状态自动刷新
+                    if (slot.getQueue() == null || slot.getQueue().isEmpty()) {
+                        if (slot.getStatus() != null) slot.getStatus().setStatus(0); // 空闲
+                    } else {
+                        if (slot.getStatus() != null) slot.getStatus().setStatus(1); // 使用中
+                    }
+                });
+            } catch (Exception e) {
+                log.error("刷新waitingTime失败: stationId={}", id, e);
+            }
+        }
+        // 第二轮：推进业务
+        for (Long id : ids) {
+            try {
+                chargingStationSlotService.updateSlotWithLock(id, slot -> {
+                    if (slot == null) return;
+                    ChargingStationResponse station = chargingStationService.getChargingStationWithSlot(id);
+                    if (slot.getStatus() == null
+                            || slot.getStatus().getStatus() == 2
+                            || slot.getStatus().getStatus() == 3) {
+                        // 桩关闭或故障
+                        releaseOrdersFromSlot(slot, station.getMode());
+                        return;
+                    }
                     processChargingHeadOrder(id, slot);
                 });
             } catch (Exception e) {
-                log.error("调度充电桩[{}]异常", id, e);
-            }
-        }
-    }
-
-    // 补全队列
-    private void processQueueFill(Long stationId, ChargingStationSlot slot) {
-        ChargingStationResponse station = chargingStationService.getChargingStationWithSlot(stationId);
-
-        int needFill = station.getMaxQueueLength() - (slot.getQueue() == null ? 0 : slot.getQueue().size());
-        if (needFill <= 0) return;
-        // 使用QueueService获取队列所有订单ID
-        Set<String> waitingOrderIds = queueService.getAllOrderIdsInQueue(station.getMode());
-        if (waitingOrderIds == null || waitingOrderIds.isEmpty())
-            return;
-        if (slot.getQueue() == null)
-            slot.setQueue(new ArrayList<>());
-
-        for (String orderIdStr : waitingOrderIds) {
-            if (slot.getQueue().size() >= station.getMaxQueueLength())
-                break;
-            Long orderId;
-            try {
-                orderId = Long.parseLong(orderIdStr);
-            } catch (Exception ignore) {
-                continue;
-            }
-            if (slot.getQueue().contains(orderId))
-                continue;
-            Order order = orderCacheService.getOrder(orderId);
-            if (order == null)
-                continue;
-            if (order.getStatus() == 3) { // 3=等待中
-                order.setStatus(2); // 2=排队中
-                order.setQueueNo(null);
-                order.setChargingStationId(stationId); // 分配充电桩
-                orderCacheService.saveOrder(order); // 更新缓存
-                queueService.removeOrderFromQueueWithLock(station.getMode(), orderIdStr);
-                slot.getQueue().add(orderId);
+                log.error("推进业务异常: stationId={}", id, e);
             }
         }
     }
@@ -95,7 +80,6 @@ public class ChargingStationScheduler {
     // 处理队首订单
     private void processChargingHeadOrder(Long stationId, ChargingStationSlot slot) {
         ChargingStationResponse station = chargingStationService.getChargingStationWithSlot(stationId);
-
         if (slot.getQueue() == null || slot.getQueue().isEmpty()) return;
         Long orderId = slot.getQueue().get(0);
         Order order = orderCacheService.getOrder(orderId);
@@ -103,7 +87,6 @@ public class ChargingStationScheduler {
             slot.getQueue().remove(0); // 移除无效单
             return;
         }
-
         if (order.getStatus() != 1) { // 非进行中，初始化
             order.setStatus(1);
             order.setActualCharge(BigDecimal.valueOf(0.0));
@@ -113,7 +96,6 @@ public class ChargingStationScheduler {
             order.setTotalFee(BigDecimal.valueOf(0.0));
             order.setStartTime(LocalDateTime.now());
         }
-
         // 每秒推进
         order.setChargeDuration(order.getChargeDuration() + 1);
         BigDecimal addedCharge = station.getPower();
@@ -124,23 +106,12 @@ public class ChargingStationScheduler {
         order.setServiceFee(order.getActualCharge().multiply(station.getServiceFee()));
         order.setTotalFee(order.getChargeFee().add(order.getServiceFee()));
 
-        orderCacheService.saveOrder(order); // 更新缓存
+        // 实时写回Redis
+        orderCacheService.saveOrder(order);
 
         // 判断是否充满
         if (order.getActualCharge().compareTo(order.getChargeAmount()) >= 0) {
-            LocalDateTime stop = LocalDateTime.now();
-            order.setStopTime(stop);
-            order.setStatus(0); // 已完成
-            orderCacheService.deleteOrder(orderId); // 从缓存移除
-            orderRepository.save(order); // 入库
-            slot.getQueue().remove(0);
-            chargingStationSlotService.setSlot(stationId, slot); // 立即更新 slot 状态到缓存
-
-            // 更新报表
-            chargingStationService.updateReportInfo(order.getChargingStationId(), order);
-
-            // 发消息/推送等可扩展
-            log.info("订单完成: orderId={}, userId={}", order.getId(), order.getUserId());
+            orderService.settleOrder(orderId);
         }
     }
 
@@ -157,5 +128,38 @@ public class ChargingStationScheduler {
         } else {
             return station.getNormalPrice();
         }
+    }
+
+    // 释放订单到等待区
+    private void releaseOrdersFromSlot(ChargingStationSlot slot, int mode) {
+        if (slot.getQueue() == null || slot.getQueue().isEmpty()) return;
+        // 收集所有队列订单ID
+        List<Long> orderIds = new ArrayList<>(slot.getQueue());
+        // 清空slot队列
+        slot.getQueue().clear();
+        // 释放所有订单回到系统队列
+        queueService.releaseOrdersToQueueHead(orderIds, mode);
+    }
+
+    // 实时计算充电桩slot到本轮全部订单完成的等待总时长
+    private long calcWaitingTime(ChargingStationSlot slot, ChargingStationResponse station) {
+        if (slot == null || slot.getQueue() == null || slot.getQueue().isEmpty()) {
+            return 0L;
+        }
+        long totalSeconds = 0L;
+        for (Long orderId : slot.getQueue()) {
+            Order order = orderCacheService.getOrder(orderId);
+            if (order == null) continue;
+            BigDecimal remaining = order.getChargeAmount().subtract(
+                    order.getActualCharge() == null ? BigDecimal.ZERO : order.getActualCharge()
+            );
+            // 防止负数或已完成
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) continue;
+            long thisOrderSeconds = remaining
+                    .divide(station.getPower(), 0, BigDecimal.ROUND_UP)
+                    .longValue();
+            totalSeconds += thisOrderSeconds;
+        }
+        return totalSeconds;
     }
 }

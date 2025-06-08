@@ -11,6 +11,7 @@ import org.zhuzhu_charging_station_backend.dto.ChargingStationResponse;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationUpsertRequest;
 import org.zhuzhu_charging_station_backend.entity.*;
 import org.zhuzhu_charging_station_backend.exception.AlreadyExistsException;
+import org.zhuzhu_charging_station_backend.exception.BadStateException;
 import org.zhuzhu_charging_station_backend.repository.ChargingStationRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.springframework.stereotype.Service;
@@ -94,7 +95,7 @@ public class ChargingStationService {
                 }
                 // 充电桩"使用中"禁止一切变更（基础信息+slot状态）
                 if (status.getStatus() != null && status.getStatus() == 1) {
-                    throw new AlreadyExistsException("充电桩正在使用中，禁止修改所有信息");
+                    throw new BadStateException("充电桩正在使用中，禁止修改所有信息");
                 }
                 // 可以修改slot状态
                 if (request.getStatus() != null) {
@@ -164,18 +165,21 @@ public class ChargingStationService {
     }
 
     /**
-     * 将充电桩状态切为“空闲”，用于维修/复位场景
+     * 将充电桩状态切为“空闲”
      * @param id 充电桩ID
      * @return 充电桩完整信息（含基础属性、slot、报表信息）
      */
     @Transactional
-    public ChargingStationResponse repairChargingStation(Long id) {
+    public ChargingStationResponse resetChargingStationStatusToIdle(Long id) {
         ChargingStation station = chargingStationRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("充电桩不存在，无法维修"));
+                .orElseThrow(() -> new NotFoundException("充电桩不存在！"));
 
         chargingStationSlotService.updateSlotWithLock(id, slot -> {
             ChargingStationStatus status = slot.getStatus();
             if (status == null) status = new ChargingStationStatus();
+            if (status.getStatus() != null && status.getStatus() == 1) {
+                throw new BadStateException("充电桩当前正在使用中，禁止强制切换为空闲！");
+            }
             status.setStatus(0); // 0=空闲
             slot.setStatus(status);
         });
@@ -271,11 +275,15 @@ public class ChargingStationService {
         }
         if (slot.getStatus() == null) {
             ChargingStationStatus status = new ChargingStationStatus();
-            status.setStatus(0);
+            status.setStatus(2);
             status.setCurrentChargeCount(0);
             status.setCurrentChargeTime(0L);
             status.setCurrentChargeAmount(0D);
             slot.setStatus(status);
+            needSet = true;
+        }
+        if (slot.getWaitingTime() == null) {
+            slot.setWaitingTime(0L);
             needSet = true;
         }
         if (slot.getQueue() == null) {
