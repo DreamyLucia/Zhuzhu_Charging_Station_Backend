@@ -3,6 +3,8 @@ package org.zhuzhu_charging_station_backend.websocket;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -11,6 +13,7 @@ import org.zhuzhu_charging_station_backend.dto.StandardResponse;
 import org.zhuzhu_charging_station_backend.entity.Order;
 import org.zhuzhu_charging_station_backend.exception.BadStateException;
 import org.zhuzhu_charging_station_backend.service.OrderService;
+import org.zhuzhu_charging_station_backend.service.UserService;
 
 import java.util.concurrent.*;
 
@@ -30,7 +33,7 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
         try {
             JsonNode root = objectMapper.readTree(message.getPayload());
             String type = root.get("type").asText();
-            String token = root.get("token").asText();
+            String token = (String) session.getAttributes().get("token");
 
             if ("upsert".equals(type)) {
                 OrderUpsertRequest req = objectMapper.treeToValue(root.get("data"), OrderUpsertRequest.class);
