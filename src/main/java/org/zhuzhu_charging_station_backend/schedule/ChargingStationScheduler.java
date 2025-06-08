@@ -12,6 +12,7 @@ import org.zhuzhu_charging_station_backend.service.OrderCacheService;
 import org.zhuzhu_charging_station_backend.service.QueueService;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationResponse;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
@@ -105,28 +106,28 @@ public class ChargingStationScheduler {
 
         if (order.getStatus() != 1) { // 非进行中，初始化
             order.setStatus(1);
-            order.setActualCharge(0.0);
+            order.setActualCharge(BigDecimal.valueOf(0.0));
             order.setChargeDuration(0L);
-            order.setChargeFee(0.0);
-            order.setServiceFee(0.0);
-            order.setTotalFee(0.0);
+            order.setChargeFee(BigDecimal.valueOf(0.0));
+            order.setServiceFee(BigDecimal.valueOf(0.0));
+            order.setTotalFee(BigDecimal.valueOf(0.0));
             order.setStartTime(LocalDateTime.now());
         }
 
         // 每秒推进
         order.setChargeDuration(order.getChargeDuration() + 1);
-        double addedCharge = station.getPower();
-        order.setActualCharge(order.getActualCharge() + addedCharge);
+        BigDecimal addedCharge = station.getPower();
+        order.setActualCharge(order.getActualCharge().add(addedCharge));
 
-        double unitPrice = calcUnitPrice(LocalTime.now(), station);
-        order.setChargeFee(order.getActualCharge() * unitPrice);
-        order.setServiceFee(order.getActualCharge() * station.getServiceFee());
-        order.setTotalFee(order.getChargeFee() + order.getServiceFee());
+        BigDecimal unitPrice = calcUnitPrice(LocalTime.now(), station);
+        order.setChargeFee(order.getActualCharge().multiply(unitPrice));
+        order.setServiceFee(order.getActualCharge().multiply(station.getServiceFee()));
+        order.setTotalFee(order.getChargeFee().add(order.getServiceFee()));
 
         orderCacheService.saveOrder(order); // 更新缓存
 
         // 判断是否充满
-        if (order.getActualCharge() >= order.getChargeAmount()) {
+        if (order.getActualCharge().compareTo(order.getChargeAmount()) >= 0) {
             LocalDateTime stop = LocalDateTime.now();
             order.setStopTime(stop);
             order.setStatus(0); // 已完成
@@ -144,7 +145,7 @@ public class ChargingStationScheduler {
     }
 
     // 根据时间段计算电价
-    private double calcUnitPrice(LocalTime now, ChargingStationResponse station) {
+    private BigDecimal calcUnitPrice(LocalTime now, ChargingStationResponse station) {
         boolean isPeak = (now.compareTo(LocalTime.of(10, 0)) >= 0 && now.compareTo(LocalTime.of(15, 0)) < 0) ||
                 (now.compareTo(LocalTime.of(18, 0)) >= 0 && now.compareTo(LocalTime.of(21, 0)) < 0);
         boolean isValley = (now.compareTo(LocalTime.of(23, 0)) >= 0 || now.compareTo(LocalTime.of(7, 0)) < 0);

@@ -34,6 +34,7 @@ public class RedisConfig {
                         .allowIfSubType("org.zhuzhu_charging_station_backend")
                         .allowIfSubType("java.util")                           // 允许反序列化各类List/Map
                         .allowIfSubType("java.lang")                           // 允许最常用JDK类型
+                        .allowIfSubType("java.math")
                         .build(),
                 ObjectMapper.DefaultTyping.NON_FINAL
         );

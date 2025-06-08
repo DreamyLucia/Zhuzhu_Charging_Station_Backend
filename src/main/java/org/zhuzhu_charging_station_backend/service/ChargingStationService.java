@@ -15,6 +15,7 @@ import org.zhuzhu_charging_station_backend.repository.ChargingStationRepository;
 import org.zhuzhu_charging_station_backend.util.IdGenerator;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -66,10 +67,10 @@ public class ChargingStationService {
             report.setUpdatedAt(LocalDateTime.now().withNano(0));
             report.setTotalChargeCount(0);
             report.setTotalChargeTime(0L);
-            report.setTotalChargeAmount(0D);
-            report.setTotalChargeFee(0D);
-            report.setTotalServiceFee(0D);
-            report.setTotalFee(0D);
+            report.setTotalChargeAmount(BigDecimal.valueOf(0));
+            report.setTotalChargeFee(BigDecimal.valueOf(0));
+            report.setTotalServiceFee(BigDecimal.valueOf(0));
+            report.setTotalFee(BigDecimal.valueOf(0));
             station.setReport(report);
 
             ChargingStation saved = chargingStationRepository.save(station);
@@ -197,10 +198,10 @@ public class ChargingStationService {
         report.setUpdatedAt(now);
         report.setTotalChargeCount(report.getTotalChargeCount() + 1);
         report.setTotalChargeTime(report.getTotalChargeTime() + order.getChargeDuration());
-        report.setTotalChargeAmount(report.getTotalChargeAmount() + order.getActualCharge());
-        report.setTotalChargeFee(report.getTotalChargeFee() + order.getChargeFee());
-        report.setTotalServiceFee(report.getTotalServiceFee() + order.getServiceFee());
-        report.setTotalFee(report.getTotalFee() + order.getTotalFee());
+        report.setTotalChargeAmount(report.getTotalChargeAmount().add(order.getActualCharge()));
+        report.setTotalChargeFee(report.getTotalChargeFee().add(order.getChargeFee()));
+        report.setTotalServiceFee(report.getTotalServiceFee().add(order.getServiceFee()));
+        report.setTotalFee(report.getTotalFee().add(order.getTotalFee()));
         cs.setReport(report);
 
         chargingStationRepository.save(cs);

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import org.zhuzhu_charging_station_backend.entity.User;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Arrays;
@@ -29,19 +30,19 @@ public class UserResponse {
     private Integer totalChargeCount;
 
     @Schema(description = "累计充电电量", example = "1500.5")
-    private Double totalChargeAmount;
+    private BigDecimal totalChargeAmount;
 
     @Schema(description = "累计充电时长（秒）", example = "36000")
     private Long totalChargeDuration;
 
     @Schema(description = "累计充电费用", example = "1200.00")
-    private Double totalChargeFee;
+    private BigDecimal totalChargeFee;
 
     @Schema(description = "累计服务费用", example = "200.00")
-    private Double totalServiceFee;
+    private BigDecimal totalServiceFee;
 
     @Schema(description = "累计总费用", example = "1400.00")
-    private Double totalFee;
+    private BigDecimal totalFee;
 
     public UserResponse(User user) {
         this.userId = user.getUserId();

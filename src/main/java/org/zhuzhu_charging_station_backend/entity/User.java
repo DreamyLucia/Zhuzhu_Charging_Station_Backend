@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import javax.persistence.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
@@ -44,20 +45,20 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private Integer totalChargeCount = 0;    // 累计充电次数
 
-    @Column(nullable = false)
-    private Double totalChargeAmount = 0.0;  // 累计充电电量
+    @Column(nullable = false, precision = 8, scale = 2)
+    private BigDecimal totalChargeAmount = BigDecimal.valueOf(0);  // 累计充电电量
 
     @Column(nullable = false)
     private Long totalChargeDuration = 0L;   // 累计充电时长
 
-    @Column(nullable = false)
-    private Double totalChargeFee = 0.0;   // 累计充电费用
+    @Column(nullable = false, precision = 8, scale = 2)
+    private BigDecimal totalChargeFee = BigDecimal.valueOf(0);   // 累计充电费用
 
-    @Column(nullable = false)
-    private Double totalServiceFee = 0.0;  // 累计服务费用
+    @Column(nullable = false, precision = 8, scale = 2)
+    private BigDecimal totalServiceFee = BigDecimal.valueOf(0);  // 累计服务费用
 
-    @Column(nullable = false)
-    private Double totalFee = 0.0;         // 累计总费用（充电费+服务费）
+    @Column(nullable = false, precision = 8, scale = 2)
+    private BigDecimal totalFee = BigDecimal.valueOf(0);         // 累计总费用（充电费+服务费）
 
     // 确保保存时触发时间更新
     @PrePersist
