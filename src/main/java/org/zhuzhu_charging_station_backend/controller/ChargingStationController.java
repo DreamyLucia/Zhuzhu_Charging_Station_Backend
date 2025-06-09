@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/charging-stations")
+@RequestMapping("/charging-stations")
 @Tag(name = "充电桩管理")
 public class ChargingStationController {
     private final ChargingStationService chargingStationService;

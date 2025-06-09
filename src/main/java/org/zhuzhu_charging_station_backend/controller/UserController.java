@@ -13,7 +13,7 @@ import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
 import javax.validation.Valid;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @Tag(name = "用户管理")
 public class UserController {
     private final UserService userService;
