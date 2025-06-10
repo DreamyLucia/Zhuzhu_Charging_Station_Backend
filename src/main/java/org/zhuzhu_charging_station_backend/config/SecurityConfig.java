@@ -44,7 +44,7 @@ public class SecurityConfig {
                         "/swagger-resources/**",
                         "/webjars/**"
                 ).permitAll()
-                .antMatchers("/users/register", "/users/login").permitAll()
+                .antMatchers("/users/register", "/users/login", "/users/reset").permitAll()
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint())

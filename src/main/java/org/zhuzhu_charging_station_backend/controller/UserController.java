@@ -41,6 +41,15 @@ public class UserController {
         return StandardResponse.success(userService.loginWithToken(request));
     }
 
+    @PostMapping("/reset")
+    @Operation(summary = "重置密码")
+    public StandardResponse<Void> reset(
+            @Valid @RequestBody UserRequest request
+    ) {
+        userService.resetPassword(request);
+        return StandardResponse.success();
+    }
+
     @GetMapping("/info")
     @Operation(summary = "获取当前用户信息")
     public StandardResponse<UserResponse> getInfo() {

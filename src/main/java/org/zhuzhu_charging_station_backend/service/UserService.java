@@ -109,6 +109,24 @@ public class UserService {
     }
 
     /**
+     * 重置用户密码
+     * @param request 用户请求体，包含用户名与新的密码
+     */
+    @Transactional
+    public void resetPassword(UserRequest request) {
+        String username = request.getUsername();
+        String newPassword = request.getPassword();
+
+        // 查找用户，不存在则抛出异常
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("用户不存在"));
+
+        // 设置新密码（加密存储）
+        user.setPassword(PasswordUtil.encode(newPassword));
+        userRepository.save(user);
+    }
+
+    /**
      * 修改当前用户信息
      * @param userId 用户ID
      * @param newUsername 新的用户名
