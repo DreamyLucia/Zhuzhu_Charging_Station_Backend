@@ -45,6 +45,7 @@ public class SecurityConfig {
                         "/webjars/**"
                 ).permitAll()
                 .antMatchers("/users/register", "/users/login", "/users/reset").permitAll()
+                .antMatchers("/ws/orders").permitAll()     // 放行 ws 握手
                 .anyRequest().authenticated()
                 .and()
                 .exceptionHandling().authenticationEntryPoint(authenticationEntryPoint())

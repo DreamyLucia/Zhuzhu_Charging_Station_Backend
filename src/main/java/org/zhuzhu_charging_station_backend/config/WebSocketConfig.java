@@ -6,7 +6,6 @@ import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 import org.zhuzhu_charging_station_backend.websocket.OrderWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.zhuzhu_charging_station_backend.websocket.TokenHandshakeInterceptor;
 
 @Configuration
 @EnableWebSocket
@@ -23,7 +22,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         // 前端应连接 ws://<host>/ws/orders
         registry.addHandler(orderWebSocketHandler, "/ws/orders")
-                .addInterceptors(new TokenHandshakeInterceptor())
                 .setAllowedOrigins("*");
     }
 }

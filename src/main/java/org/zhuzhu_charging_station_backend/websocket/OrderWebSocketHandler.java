@@ -33,6 +33,11 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
         try {
             JsonNode root = objectMapper.readTree(message.getPayload());
             String type = root.get("type").asText();
+            // 第一次消息到来时
+            if (session.getAttributes().get("token") == null && root.has("token")) {
+                session.getAttributes().put("token", root.get("token").asText());
+            }
+
             String token = (String) session.getAttributes().get("token");
 
             if ("upsert".equals(type)) {
@@ -43,7 +48,7 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
             } else if ("query".equals(type)) {
                 Long orderId = root.get("data").get("orderId").asLong();
                 Order order = orderService.getOrder(orderId, token);
-                session.getAttributes().put("orderId", orderId);
+                session.getAttributes().put("orderId", order.getId());
                 startPushTask(session, order.getId(), token); // 开启推送
             } else if ("cancel".equals(type)) {
                 Long orderId = (Long) session.getAttributes().get("orderId");
