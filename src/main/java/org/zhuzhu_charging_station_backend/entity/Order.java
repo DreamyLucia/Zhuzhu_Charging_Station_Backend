@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class Order {
 
     @Id
-    private Long id; // 16位详单ID
+    private String id; // 16位详单ID
 
     @Column(nullable = false)
     private Long userId; // 用户ID

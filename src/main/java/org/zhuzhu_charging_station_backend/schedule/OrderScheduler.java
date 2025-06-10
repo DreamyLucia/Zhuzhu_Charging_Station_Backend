@@ -26,14 +26,14 @@ public class OrderScheduler {
     @Scheduled(cron = "*/1 * * * * *")
     public void assignOrdersToSlot() {
         for (int mode : new int[]{1, 0}) {
-            List<Long> pendingOrderIds = queueService.getAllOrderIdsInQueue(mode);
+            List<String> pendingOrderIds = queueService.getAllOrderIdsInQueue(mode);
             if (pendingOrderIds == null || pendingOrderIds.isEmpty()) {
                 continue;
             }
 
             List<Long> stationIds = chargingStationService.getAllStationIds();
 
-            for (Long orderId : pendingOrderIds) {
+            for (String orderId : pendingOrderIds) {
                 Order order = orderCacheService.getOrder(orderId);
                 if (order == null) {
                     log.warn("订单 {} 不存在，已跳过", orderId);
@@ -51,7 +51,7 @@ public class OrderScheduler {
                     if (slot == null || slot.getStatus() == null) continue;
                     int statusCode = slot.getStatus().getStatus();
                     if (statusCode == 2 || statusCode == 3) continue; // 跳过故障、关闭
-                    List<Long> slotQueue = slot.getQueue();
+                    List<String> slotQueue = slot.getQueue();
                     if (slotQueue == null) continue;
                     Integer maxQueueLength = chargingStationService.getChargingStationWithSlot(stationId).getMaxQueueLength();
                     if (maxQueueLength != null && slotQueue.size() >= maxQueueLength) continue;
@@ -96,7 +96,7 @@ public class OrderScheduler {
             return 0L;
         }
         long totalSeconds = 0L;
-        for (Long orderId : slot.getQueue()) {
+        for (String orderId : slot.getQueue()) {
             Order order = orderCacheService.getOrder(orderId);
             if (order == null) continue;
             BigDecimal remaining = order.getChargeAmount().subtract(

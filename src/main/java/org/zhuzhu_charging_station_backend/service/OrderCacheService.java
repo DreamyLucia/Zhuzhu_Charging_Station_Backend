@@ -26,7 +26,7 @@ public class OrderCacheService {
     /**
      * 从Redis获取订单
      */
-    public Order getOrder(Long orderId) {
+    public Order getOrder(String orderId) {
         if (orderId == null) return null;
         return orderRedisTemplate.opsForValue().get(buildOrderKey(orderId));
     }
@@ -48,7 +48,7 @@ public class OrderCacheService {
     /**
      * 从Redis删除订单
      */
-    public void deleteOrder(Long orderId) {
+    public void deleteOrder(String orderId) {
         if (orderId == null) return;
         orderRedisTemplate.delete(buildOrderKey(orderId));
     }
@@ -56,7 +56,7 @@ public class OrderCacheService {
     /**
      * 构建Redis订单Key
      */
-    public String buildOrderKey(Long orderId) {
+    public String buildOrderKey(String orderId) {
         return ORDER_KEY_PREFIX + orderId;
     }
 }

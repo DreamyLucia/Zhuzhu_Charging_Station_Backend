@@ -10,5 +10,5 @@ public class ChargingStationSlot {
     // 等待完成时间
     private Long waitingTime;
     // 排队中的订单ID队列
-    private List<Long> queue;
+    private List<String> queue;
 }

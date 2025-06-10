@@ -18,7 +18,7 @@ public class QueueService {
     private static final String SLOW_QUEUE_KEY = "queue:slow";
 
     @Autowired
-    private RedisTemplate<String, Long> longRedisTemplate;
+    private RedisTemplate<String, String> longRedisTemplate;
     private final RedissonClient redissonClient;
     private final OrderCacheService orderCacheService;
 
@@ -43,9 +43,9 @@ public class QueueService {
         lock.lock();
         try {
             int maxNo = 0;
-            List<Long> orderIds = longRedisTemplate.opsForList().range(queueKey, 0, -1);
+            List<String> orderIds = longRedisTemplate.opsForList().range(queueKey, 0, -1);
             if (orderIds != null && !orderIds.isEmpty()) {
-                for (Long id : orderIds) {
+                for (String id : orderIds) {
                     Order order = orderCacheService.getOrder(id);
                     if (order == null) continue;
                     String queueNo = order.getQueueNo();
@@ -70,7 +70,7 @@ public class QueueService {
      * @param mode 模式
      * @param orderId 订单ID
      */
-    public void addOrderToQueueWithLock(int mode, Long orderId) {
+    public void addOrderToQueueWithLock(int mode, String orderId) {
         String queueKey = getQueueKey(mode);
         String lockKey = "lock:queue:" + queueKey;
         RLock lock = redissonClient.getLock(lockKey);
@@ -87,7 +87,7 @@ public class QueueService {
      * @param mode 模式
      * @param orderId 订单ID
      */
-    public void addOrderToQueueHeadWithLock(int mode, Long orderId) {
+    public void addOrderToQueueHeadWithLock(int mode, String orderId) {
         String queueKey = getQueueKey(mode);
         String lockKey = "lock:queue:" + queueKey;
         RLock lock = redissonClient.getLock(lockKey);
@@ -104,7 +104,7 @@ public class QueueService {
      * @param mode 模式
      * @param orderId 订单ID
      */
-    public void removeOrderFromQueueWithLock(int mode, Long orderId) {
+    public void removeOrderFromQueueWithLock(int mode, String orderId) {
         String queueKey = getQueueKey(mode);
         String lockKey = "lock:queue:" + queueKey;
         RLock lock = redissonClient.getLock(lockKey);
@@ -119,7 +119,7 @@ public class QueueService {
     /**
      * 查询队列所有订单ID
      */
-    public List<Long> getAllOrderIdsInQueue(int mode) {
+    public List<String> getAllOrderIdsInQueue(int mode) {
         String queueKey = getQueueKey(mode);
         return longRedisTemplate.opsForList().range(queueKey, 0, -1);
     }
@@ -130,10 +130,10 @@ public class QueueService {
      * @param orderIds 要释放的订单id列表
      * @param mode 1(快充)/其它(慢充)
      */
-    public void releaseOrdersToQueueHead(List<Long> orderIds, int mode) {
+    public void releaseOrdersToQueueHead(List<String> orderIds, int mode) {
         if (orderIds == null || orderIds.isEmpty()) return;
 
-        for (Long orderId : orderIds) {
+        for (String orderId : orderIds) {
             Order order = orderCacheService.getOrder(orderId);
             if (order == null) continue;
             // 生成新的排队号

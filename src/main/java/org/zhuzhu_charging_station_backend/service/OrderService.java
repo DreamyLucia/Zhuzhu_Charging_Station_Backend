@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.zhuzhu_charging_station_backend.dto.OrderUpsertRequest;
 import org.zhuzhu_charging_station_backend.entity.Order;
-import org.zhuzhu_charging_station_backend.entity.ChargingStationSlot;
 import org.zhuzhu_charging_station_backend.entity.User;
 import org.zhuzhu_charging_station_backend.entity.ChargingStationStatus;
 import org.zhuzhu_charging_station_backend.exception.BadStateException;
@@ -43,7 +42,7 @@ public class OrderService {
         boolean isNew = (req.getId() == null);
 
         if (isNew) {
-            long orderId = IdGenerator.generateUniqueOrderId(orderRepository, 10);
+            String orderId = String.valueOf(IdGenerator.generateUniqueOrderId(orderRepository, 10));
             order = new Order();
             order.setId(orderId);
             order.setUserId(userId);
@@ -70,12 +69,14 @@ public class OrderService {
     /**
      * 查询订单
      */
-    public Order getOrder(Long orderId, String token) {
+    public Order getOrder(String orderId, String token) {
         Long userId = jwtTokenUtil.extractUserId(token);
         Order order = orderCacheService.getOrder(orderId);
         if (order == null) {
             // Cache未命中，去数据库查
+            log.info("orderId: {}", orderId);
             order = orderRepository.findById(orderId).orElse(null);
+            log.error(String.valueOf(order));
             if (order == null) {
                 throw new NotFoundException("订单不存在！");
             }
@@ -98,7 +99,7 @@ public class OrderService {
         List<Order> cachedOrders = orderCacheService.getAllOrdersByUser(userId);
 
         // 3. 合并，去重（按order id去重，缓存优先生效）
-        Map<Long, Order> orderMap = new HashMap<>();
+        Map<String, Order> orderMap = new HashMap<>();
         for (Order o : dbOrders) {
             orderMap.put(o.getId(), o);
         }
@@ -112,7 +113,7 @@ public class OrderService {
     /**
      * 取消订单
      */
-    public void cancelOrder(Long orderId, String token) {
+    public void cancelOrder(String orderId, String token) {
         Long userId = jwtTokenUtil.extractUserId(token);
         Order order = orderCacheService.getOrder(orderId);
         if (order == null) {
@@ -146,7 +147,7 @@ public class OrderService {
     /**
      * 完结订单
      */
-    public Order finishOrder(Long orderId, String token) {
+    public Order finishOrder(String orderId, String token) {
         Long userId = jwtTokenUtil.extractUserId(token);
         Order order = orderCacheService.getOrder(orderId);
         if (order == null) {
@@ -164,7 +165,7 @@ public class OrderService {
     /**
      * 完结订单，移除所有相关队列，更新slot及报表，同步缓存和数据库。
      */
-    public Order settleOrder(Long orderId) {
+    public Order settleOrder(String orderId) {
         Order order = orderCacheService.getOrder(orderId);
         if (order == null) throw new NotFoundException("订单不存在");
 

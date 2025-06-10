@@ -3,8 +3,7 @@ package org.zhuzhu_charging_station_backend.websocket;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -13,12 +12,12 @@ import org.zhuzhu_charging_station_backend.dto.StandardResponse;
 import org.zhuzhu_charging_station_backend.entity.Order;
 import org.zhuzhu_charging_station_backend.exception.BadStateException;
 import org.zhuzhu_charging_station_backend.service.OrderService;
-import org.zhuzhu_charging_station_backend.service.UserService;
 
 import java.util.concurrent.*;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class OrderWebSocketHandler extends TextWebSocketHandler {
 
     private final OrderService orderService;
@@ -46,12 +45,12 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
                 session.getAttributes().put("orderId", order.getId());
                 startPushTask(session, order.getId(), token); // 开启推送
             } else if ("query".equals(type)) {
-                Long orderId = root.get("data").get("orderId").asLong();
+                String orderId = root.get("data").get("orderId").asText();
                 Order order = orderService.getOrder(orderId, token);
                 session.getAttributes().put("orderId", order.getId());
                 startPushTask(session, order.getId(), token); // 开启推送
             } else if ("cancel".equals(type)) {
-                Long orderId = (Long) session.getAttributes().get("orderId");
+                String orderId = root.get("data").get("orderId").asText();
                 if (orderId == null) {
                     throw new BadStateException("未指定订单");
                 }
@@ -60,7 +59,7 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
                 stopPushTask(session);
                 session.close();
             } else if ("finish".equals(type)) {
-                Long orderId = (Long) session.getAttributes().get("orderId");
+                String orderId = root.get("data").get("orderId").asText();
                 if (orderId == null) {
                     throw new BadStateException("未指定订单");
                 }
@@ -71,16 +70,15 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
             } else {
                 throw new BadStateException("未知type: " + type);
             }
-
         } catch (BadStateException e) {
             sendResponse(session, StandardResponse.error(400, e.getMessage()));
         } catch (Exception e) {
-            sendResponse(session, StandardResponse.error(500, "内部错误: " + e.getMessage()));
+            sendResponse(session, StandardResponse.error(500, e.getMessage()));
         }
     }
 
     // 开始定时推送
-    private void startPushTask(WebSocketSession session, Long orderId, String token) {
+    private void startPushTask(WebSocketSession session, String orderId, String token) {
         // 有旧的先停
         stopPushTask(session);
         ScheduledFuture<?> future = executor.scheduleAtFixedRate(() -> {

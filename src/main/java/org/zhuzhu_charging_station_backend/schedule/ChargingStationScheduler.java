@@ -81,13 +81,14 @@ public class ChargingStationScheduler {
     private void processChargingHeadOrder(Long stationId, ChargingStationSlot slot) {
         ChargingStationResponse station = chargingStationService.getChargingStationWithSlot(stationId);
         if (slot.getQueue() == null || slot.getQueue().isEmpty()) return;
-        Long orderId = slot.getQueue().get(0);
+        String orderId = slot.getQueue().get(0);
         Order order = orderCacheService.getOrder(orderId);
         if (order == null) {
             slot.getQueue().remove(0); // 移除无效单
             return;
         }
         if (order.getStatus() != 1) { // 非进行中，初始化
+            order.setQueueNo("");
             order.setStatus(1);
             order.setActualCharge(BigDecimal.valueOf(0.0));
             order.setChargeDuration(0L);
@@ -134,7 +135,7 @@ public class ChargingStationScheduler {
     private void releaseOrdersFromSlot(ChargingStationSlot slot, int mode) {
         if (slot.getQueue() == null || slot.getQueue().isEmpty()) return;
         // 收集所有队列订单ID
-        List<Long> orderIds = new ArrayList<>(slot.getQueue());
+        List<String> orderIds = new ArrayList<>(slot.getQueue());
         // 清空slot队列
         slot.getQueue().clear();
         // 释放所有订单回到系统队列
@@ -147,7 +148,7 @@ public class ChargingStationScheduler {
             return 0L;
         }
         long totalSeconds = 0L;
-        for (Long orderId : slot.getQueue()) {
+        for (String orderId : slot.getQueue()) {
             Order order = orderCacheService.getOrder(orderId);
             if (order == null) continue;
             BigDecimal remaining = order.getChargeAmount().subtract(

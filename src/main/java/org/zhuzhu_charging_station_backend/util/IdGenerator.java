@@ -55,9 +55,9 @@ public class IdGenerator {
      * @param maxAttempts 最大尝试次数
      * @return 唯一16位详单ID
      */
-    public static long generateUniqueOrderId(OrderRepository orderRepository, int maxAttempts) {
+    public static String generateUniqueOrderId(OrderRepository orderRepository, int maxAttempts) {
         for (int i = 0; i < maxAttempts; i++) {
-            long candidateId = MIN_ID_SIXTEEN + (long)(random.nextDouble() * (MAX_ID_SIXTEEN - MIN_ID_SIXTEEN + 1));
+            String candidateId = String.valueOf(MIN_ID_SIXTEEN + (long)(random.nextDouble() * (MAX_ID_SIXTEEN - MIN_ID_SIXTEEN + 1)));
             if (!orderRepository.existsById(candidateId)) {
                 return candidateId;
             }
