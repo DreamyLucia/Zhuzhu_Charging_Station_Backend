@@ -1,8 +1,10 @@
 package org.zhuzhu_charging_station_backend.controller;
 
 import org.zhuzhu_charging_station_backend.dto.*;
+import org.zhuzhu_charging_station_backend.entity.Order;
 import org.zhuzhu_charging_station_backend.entity.User;
 import org.zhuzhu_charging_station_backend.repository.UserRepository;
+import org.zhuzhu_charging_station_backend.service.OrderService;
 import org.zhuzhu_charging_station_backend.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,6 +13,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
 
 import javax.validation.Valid;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -18,10 +21,12 @@ import javax.validation.Valid;
 public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
+    private final OrderService orderService;
 
-    public UserController(UserService userService, UserRepository userRepository, JwtTokenUtil jwtTokenUtil) {
+    public UserController(UserService userService, UserRepository userRepository, OrderService orderService) {
         this.userService = userService;
         this.userRepository = userRepository;
+        this.orderService = orderService;
     }
 
     @PostMapping("/register")
@@ -58,6 +63,14 @@ public class UserController {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
         return StandardResponse.success(new UserResponse(user));
+    }
+
+    @GetMapping("/orders")
+    @Operation(summary = "获取当前用户的所有订单")
+    public StandardResponse<List<Order>> getUserOrders() {
+        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        List<Order> orders = orderService.getAllOrdersByUser(userId);
+        return StandardResponse.success(orders);
     }
 
     @PutMapping("/username")

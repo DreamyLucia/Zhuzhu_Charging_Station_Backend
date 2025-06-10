@@ -5,6 +5,8 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.zhuzhu_charging_station_backend.entity.Order;
 
+import java.util.*;
+
 @Service
 @RequiredArgsConstructor
 public class OrderCacheService {
@@ -27,6 +29,20 @@ public class OrderCacheService {
     public Order getOrder(Long orderId) {
         if (orderId == null) return null;
         return orderRedisTemplate.opsForValue().get(buildOrderKey(orderId));
+    }
+
+    public List<Order> getAllOrdersByUser(Long userId) {
+        Set<String> keys = orderRedisTemplate.keys("order:*");
+        if (keys == null || keys.isEmpty()) return Collections.emptyList();
+
+        List<Order> result = new ArrayList<>();
+        for (String key : keys) {
+            Order order = orderRedisTemplate.opsForValue().get(key);
+            if (order != null && Objects.equals(order.getUserId(), userId)) {
+                result.add(order);
+            }
+        }
+        return result;
     }
 
     /**

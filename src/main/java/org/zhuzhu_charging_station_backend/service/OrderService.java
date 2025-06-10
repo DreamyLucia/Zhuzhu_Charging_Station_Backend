@@ -17,6 +17,10 @@ import org.zhuzhu_charging_station_backend.exception.NotFoundException;
 import org.zhuzhu_charging_station_backend.exception.ForbiddenException;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -80,6 +84,29 @@ public class OrderService {
             throw new ForbiddenException("无权限查询他人订单！");
         }
         return order;
+    }
+
+    /**
+     * 所有查询订单
+     */
+    public List<Order> getAllOrdersByUser(Long userId) {
+
+        // 1. 数据库所有订单
+        List<Order> dbOrders = orderRepository.findByUserId(userId);
+
+        // 2. 缓存所有订单
+        List<Order> cachedOrders = orderCacheService.getAllOrdersByUser(userId);
+
+        // 3. 合并，去重（按order id去重，缓存优先生效）
+        Map<Long, Order> orderMap = new HashMap<>();
+        for (Order o : dbOrders) {
+            orderMap.put(o.getId(), o);
+        }
+        for (Order o : cachedOrders) {
+            orderMap.put(o.getId(), o); // cache覆盖db
+        }
+        // 如果你想cache中的覆盖db中的
+        return new ArrayList<>(orderMap.values());
     }
 
     /**
