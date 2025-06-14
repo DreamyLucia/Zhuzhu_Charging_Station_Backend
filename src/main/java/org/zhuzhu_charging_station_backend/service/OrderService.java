@@ -74,9 +74,7 @@ public class OrderService {
         Order order = orderCacheService.getOrder(orderId);
         if (order == null) {
             // Cache未命中，去数据库查
-            log.info("orderId: {}", orderId);
             order = orderRepository.findById(orderId).orElse(null);
-            log.error(String.valueOf(order));
             if (order == null) {
                 throw new NotFoundException("订单不存在！");
             }

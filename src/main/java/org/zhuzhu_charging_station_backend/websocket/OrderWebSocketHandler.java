@@ -85,7 +85,7 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
             try {
                 Order order = orderService.getOrder(orderId, token);
                 sendResponse(session, StandardResponse.success(order)); // 发送订单状态
-                if (order.getStatus() == 0) {
+                if (order.getStatus() == 0 || order.getStatus() == 4) {  // 已完成或已取消
                     stopPushTask(session);
                     session.close();
                 }
