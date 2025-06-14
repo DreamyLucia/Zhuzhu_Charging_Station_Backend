@@ -54,8 +54,8 @@ public class OrderWebSocketHandler extends TextWebSocketHandler {
                 if (orderId == null) {
                     throw new BadStateException("未指定订单");
                 }
-                orderService.cancelOrder(orderId, token);
-                sendResponse(session, StandardResponse.success("订单已取消"));
+                Order order = orderService.cancelOrder(orderId, token);
+                sendResponse(session, StandardResponse.success(order));
                 stopPushTask(session);
                 session.close();
             } else if ("finish".equals(type)) {

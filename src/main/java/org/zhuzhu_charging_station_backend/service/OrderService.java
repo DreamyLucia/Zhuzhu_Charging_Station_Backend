@@ -111,7 +111,7 @@ public class OrderService {
     /**
      * 取消订单
      */
-    public void cancelOrder(String orderId, String token) {
+    public Order cancelOrder(String orderId, String token) {
         Long userId = jwtTokenUtil.extractUserId(token);
         Order order = orderCacheService.getOrder(orderId);
         if (order == null) {
@@ -140,6 +140,8 @@ public class OrderService {
         order.setStatus(4); // 4: 已取消
         orderRepository.save(order);
         orderCacheService.deleteOrder(orderId);
+
+        return order;
     }
 
     /**
