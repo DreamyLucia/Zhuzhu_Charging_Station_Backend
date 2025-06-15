@@ -15,6 +15,7 @@ import org.zhuzhu_charging_station_backend.util.JwtTokenUtil;
 import org.zhuzhu_charging_station_backend.exception.NotFoundException;
 import org.zhuzhu_charging_station_backend.exception.ForbiddenException;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,7 +43,7 @@ public class OrderService {
         boolean isNew = (req.getId() == null);
 
         if (isNew) {
-            String orderId = String.valueOf(IdGenerator.generateUniqueOrderId(orderRepository, 10));
+            String orderId = IdGenerator.generateUniqueOrderId(orderRepository, 10);
             order = new Order();
             order.setId(orderId);
             order.setUserId(userId);
@@ -123,25 +124,29 @@ public class OrderService {
         if (order.getStatus() != 2 && order.getStatus() != 3) {
             throw new BadStateException("订单当前状态不可取消！");
         }
-        // 1. 移除分配前的队列
-        queueService.removeOrderFromQueueWithLock(order.getMode(), order.getId());
+        if (order.getActualCharge() != null && order.getActualCharge().compareTo(BigDecimal.ZERO) >= 0) {
+            return settleOrder(orderId);
+        } else {
+            // 1. 移除分配前的队列
+            queueService.removeOrderFromQueueWithLock(order.getMode(), order.getId());
 
-        // 2. 移除slot队列
-        if (order.getChargingStationId() != null) {
-            Long stationId = order.getChargingStationId();
-            chargingStationSlotService.updateSlotWithLock(stationId, slot -> {
-                if (slot != null && slot.getQueue() != null) {
-                    slot.getQueue().remove(orderId);
-                }
-            });
+            // 2. 移除slot队列
+            if (order.getChargingStationId() != null) {
+                Long stationId = order.getChargingStationId();
+                chargingStationSlotService.updateSlotWithLock(stationId, slot -> {
+                    if (slot != null && slot.getQueue() != null) {
+                        slot.getQueue().remove(orderId);
+                    }
+                });
+            }
+
+            // 3. 修改/删除本地/缓存订单
+            order.setStatus(4); // 4: 已取消
+            orderRepository.save(order);
+            orderCacheService.deleteOrder(orderId);
+
+            return order;
         }
-
-        // 3. 修改/删除本地/缓存订单
-        order.setStatus(4); // 4: 已取消
-        orderRepository.save(order);
-        orderCacheService.deleteOrder(orderId);
-
-        return order;
     }
 
     /**

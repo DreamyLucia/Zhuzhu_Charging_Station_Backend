@@ -20,5 +20,4 @@ public class ChargingStationUpsertRequest {
     private BigDecimal normalPrice;                  // 平时，7:00~10:00, 15:00~18:00, 21:00~23:00
     private BigDecimal valleyPrice;                  // 谷时，23:00~7:00
     private Integer maxQueueLength;              // 最大排队数
-    private Integer status;                      // 充电桩状态
 }

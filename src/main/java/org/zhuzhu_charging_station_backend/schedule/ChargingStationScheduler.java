@@ -8,6 +8,7 @@ import org.zhuzhu_charging_station_backend.entity.*;
 import org.zhuzhu_charging_station_backend.repository.OrderRepository;
 import org.zhuzhu_charging_station_backend.service.*;
 import org.zhuzhu_charging_station_backend.dto.ChargingStationResponse;
+import org.zhuzhu_charging_station_backend.util.IdGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,6 +23,7 @@ public class ChargingStationScheduler {
     private final ChargingStationSlotService chargingStationSlotService;
     private final QueueService queueService;
     private final OrderCacheService orderCacheService;
+    private final OrderRepository orderRepository;
     private final OrderService orderService;
 
     @Scheduled(cron = "*/1 * * * * *") // 每秒执行一次
@@ -138,8 +140,47 @@ public class ChargingStationScheduler {
         List<String> orderIds = new ArrayList<>(slot.getQueue());
         // 清空slot队列
         slot.getQueue().clear();
-        // 释放所有订单回到系统队列
+
+        if (orderIds.isEmpty()) return;
+
+        // 处理队首订单
+        String headOrderId = orderIds.get(0);
+        orderIds.remove(0);
         queueService.releaseOrdersToQueueHead(orderIds, mode);
+        Order headOrder = orderCacheService.getOrder(headOrderId);
+        if (headOrder != null) {
+            // 先结算当前订单（生成详单并关闭订单）
+            orderService.settleOrder(headOrderId);
+
+            // 计算剩余充电量
+            BigDecimal actualCharge = headOrder.getActualCharge() == null ? BigDecimal.ZERO : headOrder.getActualCharge();
+            BigDecimal remainingCharge = headOrder.getChargeAmount().subtract(actualCharge);
+
+            if (remainingCharge.compareTo(BigDecimal.ZERO) > 0) {
+                // 创建新订单对象，复制必要字段
+                Order newOrder = new Order();
+                newOrder.setId(IdGenerator.generateUniqueOrderId(orderRepository, 10));
+                newOrder.setUserId(headOrder.getUserId());
+                newOrder.setChargingStationId(headOrder.getChargingStationId());
+                newOrder.setMode(headOrder.getMode());
+                newOrder.setRecordTime(LocalDateTime.now());
+                newOrder.setChargeAmount(remainingCharge);
+                newOrder.setActualCharge(BigDecimal.ZERO);
+                newOrder.setChargeDuration(0L);
+                newOrder.setStartTime(null);
+                newOrder.setStopTime(null);
+                newOrder.setChargeFee(BigDecimal.ZERO);
+                newOrder.setServiceFee(BigDecimal.ZERO);
+                newOrder.setTotalFee(BigDecimal.ZERO);
+                newOrder.setStatus(2); // 2: 排队中
+
+                // 保存新订单（你可能需要调用订单服务的方法，我假设是 saveOrder）
+                orderCacheService.saveOrder(newOrder);
+
+                // 放回等待队列
+                queueService.releaseOrdersToQueueHead(Collections.singletonList(newOrder.getId()), mode);
+            }
+        }
     }
 
     // 实时计算充电桩slot到本轮全部订单完成的等待总时长

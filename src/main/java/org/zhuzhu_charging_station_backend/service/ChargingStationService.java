@@ -97,16 +97,6 @@ public class ChargingStationService {
                 if (status.getStatus() != null && status.getStatus() == 1) {
                     throw new BadStateException("充电桩正在使用中，禁止修改所有信息");
                 }
-                // 可以修改slot状态
-                if (request.getStatus() != null) {
-                    status.setStatus(request.getStatus());
-                    if (request.getStatus() == 2) { // 2 = 关闭
-                        status.setCurrentChargeCount(0);
-                        status.setCurrentChargeTime(0L);
-                        status.setCurrentChargeAmount(0D);
-                    }
-                }
-                slot.setStatus(status);
 
                 // 可以改数据库基础属性
                 if (request.getName() != null) station.setName(request.getName());
@@ -165,12 +155,39 @@ public class ChargingStationService {
     }
 
     /**
-     * 将充电桩状态切为“空闲”
+     * 维修充电桩
      * @param id 充电桩ID
      * @return 充电桩完整信息（含基础属性、slot、报表信息）
      */
     @Transactional
-    public ChargingStationResponse resetChargingStationStatusToIdle(Long id) {
+    public ChargingStationResponse fixChargingStation(Long id) {
+        ChargingStation station = chargingStationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("充电桩不存在！"));
+
+        chargingStationSlotService.updateSlotWithLock(id, slot -> {
+            ChargingStationStatus status = slot.getStatus();
+            if (status == null) status = new ChargingStationStatus();
+            if (status.getStatus() != null && status.getStatus() != 3) {
+                throw new BadStateException("充电桩未损坏，无法维修！");
+            }
+            status.setStatus(2); // 2=关闭
+            status.setCurrentChargeCount(0);
+            status.setCurrentChargeTime(0L);
+            status.setCurrentChargeAmount(0D);
+            slot.setStatus(status);
+        });
+
+        ChargingStationSlot slot = chargingStationSlotService.getSlot(id);
+        return buildChargingStationResponse(station, slot);
+    }
+
+    /**
+     * 关闭充电桩
+     * @param id 充电桩ID
+     * @return 充电桩完整信息（含基础属性、slot、报表信息）
+     */
+    @Transactional
+    public ChargingStationResponse shutChargingStation(Long id) {
         ChargingStation station = chargingStationRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("充电桩不存在！"));
 
@@ -178,7 +195,37 @@ public class ChargingStationService {
             ChargingStationStatus status = slot.getStatus();
             if (status == null) status = new ChargingStationStatus();
             if (status.getStatus() != null && status.getStatus() == 1) {
-                throw new BadStateException("充电桩当前正在使用中，禁止强制切换为空闲！");
+                throw new BadStateException("充电桩使用中，无法强行关闭！");
+            }
+            status.setStatus(2); // 2=关闭
+            status.setCurrentChargeCount(0);
+            status.setCurrentChargeTime(0L);
+            status.setCurrentChargeAmount(0D);
+            slot.setStatus(status);
+        });
+
+        ChargingStationSlot slot = chargingStationSlotService.getSlot(id);
+        return buildChargingStationResponse(station, slot);
+    }
+
+    /**
+     * 开启充电桩
+     * @param id 充电桩ID
+     * @return 充电桩完整信息（含基础属性、slot、报表信息）
+     */
+    @Transactional
+    public ChargingStationResponse openChargingStation(Long id) {
+        ChargingStation station = chargingStationRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("充电桩不存在！"));
+
+        chargingStationSlotService.updateSlotWithLock(id, slot -> {
+            ChargingStationStatus status = slot.getStatus();
+            if (status == null) status = new ChargingStationStatus();
+            if (status.getStatus() != null && status.getStatus() == 3) {
+                throw new BadStateException("充电桩故障，无法启动！");
+            }
+            if (status.getStatus() != null && status.getStatus() == 1) {
+                throw new BadStateException("充电桩使用中，无法设置为空闲状态！");
             }
             status.setStatus(0); // 0=空闲
             slot.setStatus(status);
