@@ -21,7 +21,7 @@ public class ChargingStation {
     @Column(nullable = false)
     private Integer mode; // 充电模式，0：慢充，1：快充
 
-    @Column(nullable = false, precision = 8, scale = 2)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal power; // 功率
 
     @Column(nullable = false, precision = 8, scale = 2)

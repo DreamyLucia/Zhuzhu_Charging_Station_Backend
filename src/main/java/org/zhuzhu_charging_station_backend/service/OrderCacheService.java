@@ -45,6 +45,20 @@ public class OrderCacheService {
         return result;
     }
 
+    public List<Order> getAllOrders() {
+        Set<String> keys = orderRedisTemplate.keys("order:*");
+        if (keys == null || keys.isEmpty()) return Collections.emptyList();
+
+        List<Order> result = new ArrayList<>();
+        for (String key : keys) {
+            Order order = orderRedisTemplate.opsForValue().get(key);
+            if (order != null) {
+                result.add(order);
+            }
+        }
+        return result;
+    }
+
     /**
      * 从Redis删除订单
      */

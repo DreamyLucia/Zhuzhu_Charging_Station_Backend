@@ -22,11 +22,13 @@ public class UserController {
     private final UserService userService;
     private final UserRepository userRepository;
     private final OrderService orderService;
+    private final JwtTokenUtil jwtTokenUtil;
 
-    public UserController(UserService userService, UserRepository userRepository, OrderService orderService) {
+    public UserController(UserService userService, UserRepository userRepository, OrderService orderService, JwtTokenUtil jwtTokenUtil) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.orderService = orderService;
+        this.jwtTokenUtil = jwtTokenUtil;
     }
 
     @PostMapping("/register")
@@ -67,9 +69,16 @@ public class UserController {
 
     @GetMapping("/orders")
     @Operation(summary = "获取当前用户的所有订单")
-    public StandardResponse<List<Order>> getUserOrders() {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        List<Order> orders = orderService.getAllOrdersByUser(userId);
+    public StandardResponse<List<Order>> getUserOrders(@RequestHeader("Authorization") String authHeader) {
+        String token = authHeader.replace("Bearer ", "");
+        List<String> roles = jwtTokenUtil.extractRoles(token);
+        List<Order> orders;
+        if (roles != null && roles.contains("ROLE_ADMIN")) {
+            orders = orderService.getAllOrders(); // 管理员查看所有订单
+        } else {
+            Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            orders = orderService.getAllOrdersByUser(userId); // 普通用户只看自己订单
+        }
         return StandardResponse.success(orders);
     }
 
